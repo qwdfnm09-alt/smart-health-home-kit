@@ -58,7 +58,8 @@ The app includes a rule-based engine that provides:
 
 ## 📸 Screenshots
 
-(Add your app screenshots here)
+<img width="1006" height="2181" alt="image" src="https://github.com/user-attachments/assets/8afe8189-83be-42a2-8f8a-534f5585965b" />
+
 
 ---
 
