@@ -16,6 +16,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _nameController = TextEditingController();
   final _ageController = TextEditingController();
   String _gender = 'ذكر';
+  // ✅ الشخصية (الجديدة)
+  PersonalityType _personality = PersonalityType.balanced;
+
   final _conditionsController = TextEditingController();
 
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -32,6 +35,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       _ageController.text = profile.age.toString();
       _gender = profile.gender;
       _conditionsController.text = profile.conditions.join(', ');
+      _personality = profile.personality; // ✅ تحميل الشخصية
+
     }
   }
 
@@ -41,8 +46,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         name: _nameController.text.trim(),
         age: int.tryParse(_ageController.text) ?? 0,
         gender: _gender,
-        conditions:
-        _conditionsController.text.split(',').map((s) => s.trim()).toList(),
+        conditions:_conditionsController.text
+            .split(',')
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty)
+            .toList(),
+        personality: _personality, // ✅ مهم جدًا
       );
       await StorageService().saveUserProfile(newProfile);
 
@@ -70,6 +79,30 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  Widget _buildInputCard({required Widget child}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            Colors.blueGrey.shade800,
+            Colors.teal.shade700,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.teal.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
@@ -78,35 +111,95 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       appBar: AppBar(
         title: Text(t.editProfile),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: ListView(
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: InputDecoration(labelText: t.profile),
-                validator: (value) =>
-                value == null || value.isEmpty ? '⚠️' : null,
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+
+            // 🔥 HEADER
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.blueGrey.shade800,
+                    Colors.teal.shade700,
+                  ],
+                ),
               ),
-              const SizedBox(height: 12),
-              TextFormField(
+              child: Column(
+                children: [
+                  CircleAvatar(
+                    radius: 42,
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
+                    child: CircleAvatar(
+                      radius: 38,
+                      backgroundColor: Colors.teal.shade300,
+                      child: const Icon(Icons.person, size: 40, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _isEditing ? "Edit Profile" : "Create Profile",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // 🔥 NAME
+            _buildInputCard(
+              child: TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: t.profile,
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  border: InputBorder.none,
+                ),
+                style: const TextStyle(color: Colors.white),
+                validator: (value) =>
+                value == null || value.isEmpty ? 'من فضلك ادخل الاسم' : null,
+              ),
+            ),
+
+            // 🔥 AGE
+            _buildInputCard(
+              child: TextFormField(
                 controller: _ageController,
                 keyboardType: TextInputType.number,
-                decoration: InputDecoration(labelText: t.age),
+                decoration: InputDecoration(
+                  labelText: t.age,
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  border: InputBorder.none,
+                ),
+                style: const TextStyle(color: Colors.white),
                 validator: (value) =>
-                value == null || value.isEmpty ? '⚠️' : null,
+                value == null || value.isEmpty ? 'من فضلك ادخل سنك' : null,
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
+            ),
+
+            // 🔥 GENDER
+            _buildInputCard(
+              child: DropdownButtonFormField<String>(
                 initialValue: _gender,
-                decoration: InputDecoration(labelText: t.gender),
+                decoration: InputDecoration(
+                  labelText: t.gender,
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  border: InputBorder.none,
+                ),
+                dropdownColor: Colors.blueGrey.shade800,
+                style: const TextStyle(color: Colors.white),
                 onChanged: (value) {
                   if (value != null) {
-                    setState(() {
-                      _gender = value;
-                    });
+                    setState(() => _gender = value);
                   }
                 },
                 items: const [
@@ -114,22 +207,91 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   DropdownMenuItem(value: 'أنثى', child: Text('أنثى')),
                 ],
               ),
-              const SizedBox(height: 12),
-              TextFormField(
+            ),
+
+            // 🔥 CONDITIONS
+            _buildInputCard(
+              child: TextFormField(
                 controller: _conditionsController,
-                decoration: InputDecoration(labelText: t.healthConditions),
+                decoration: InputDecoration(
+                  labelText: t.healthConditions,
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  border: InputBorder.none,
+                ),
+                style: const TextStyle(color: Colors.white),
               ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: _saveProfile,
-                icon: const Icon(Icons.save),
-                label: Text(t.save),
+            ),
+
+            // 🔥 PERSONALITY
+            _buildInputCard(
+              child: DropdownButtonFormField<PersonalityType>(
+                initialValue: _personality,
+                decoration: InputDecoration(
+                  labelText: t.styleofadvice,
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  border: InputBorder.none,
+                ),
+                dropdownColor: Colors.blueGrey.shade800,
+                style: const TextStyle(color: Colors.white),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() => _personality = value);
+                  }
+                },
+                items: const [
+                  DropdownMenuItem(
+                    value: PersonalityType.strict,
+                    child: Text('صارم'),
+                  ),
+                  DropdownMenuItem(
+                    value: PersonalityType.balanced,
+                    child: Text('متوازن'),
+                  ),
+                  DropdownMenuItem(
+                    value: PersonalityType.relaxed,
+                    child: Text('مريح'),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+
+            const SizedBox(height: 24),
+
+            //  SAVE BUTTON
+             AnimatedContainer(
+               duration: const Duration(milliseconds: 200),
+               child: GestureDetector(
+                 onTap: _saveProfile,
+                 child: Container(
+                   padding: const EdgeInsets.all(16),
+                   decoration: BoxDecoration(
+                     borderRadius: BorderRadius.circular(16),
+                     gradient: LinearGradient(
+                       colors: [
+                         Colors.teal.shade400,
+                         Colors.teal.shade700,
+                       ],
+                     ),
+                   ),
+                   child: Row(
+                     mainAxisAlignment: MainAxisAlignment.center,
+                     children: [
+                       const Icon(Icons.save, color: Colors.white),
+                       const SizedBox(width: 10),
+                       Text(
+                         t.save,
+                         style: const TextStyle(
+                           color: Colors.white,
+                           fontWeight: FontWeight.bold,
+                         ),
+                       ),
+                     ],
+                   ),
+                 ),
+               ),
+             )],
         ),
       ),
     );
   }
 }
-

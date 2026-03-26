@@ -15,20 +15,64 @@ import 'models/user_profile.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/app_theme_mode.dart';
 import 'utils/animated_routes.dart';
+import '../utils/logger.dart';
+import 'services/notification_service.dart';
+import 'screens/setup_screen.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'models/health_advice.dart';
 
 
 
 
+
+
+// ✅ هنا عرّف المفتاح
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await StorageService().init();
+
+  try {
+    await StorageService().init();
+  } catch (e) {
+    // 🔥 لو حصل مشكلة تشفير / SecureStorage / Hive
+    AppLogger.logError("❌ Storage init failed: $e");
+
+
+    await Hive.deleteFromDisk();
+    await const FlutterSecureStorage().deleteAll();
+
+    await StorageService().init();
+  }
+
+  // 🟢🟢🟢 افتح Boxes الخاصة بالنصائح هنا
+  await Hive.openBox<HealthAdvice>('adviceBox');
+  await Hive.openBox('remindLaterBox');
+
+
+
+  // ✅ دي بتطبع أي Error بيحصل حتى في release mode
+  FlutterError.onError = (FlutterErrorDetails details) {
+    FlutterError.dumpErrorToConsole(details);
+  };
+
+
+  debugPrint = (String? message, {int? wrapWidth}) {
+    if (message != null) {
+      AppLogger.logInfo("PRINT: $message");
+    }
+  };
   runApp(const SmartHealthApp());
+  // بعد ما يشتغل التطبيق، شغّل الحاجات دي
+  await Future.delayed(const Duration(seconds: 1)); // تأخير بسيط لضمان الواجهة اشتغلت
+  await NotificationService.init();
 }
 
 class SmartHealthApp extends StatefulWidget {
   const SmartHealthApp({super.key});
+
+
 
   @override
   State<SmartHealthApp> createState() => _SmartHealthAppState();
@@ -58,7 +102,9 @@ class _SmartHealthAppState extends State<SmartHealthApp> {
     _themeMode = savedTheme == 'dark' ? AppThemeMode.dark : AppThemeMode.light;
     _alertsEnabled = savedAlerts != 'false';
 
+
     setState(() {});
+    await NotificationService.checkAndNotifyNow();
   }
 
   Future<void> _saveTheme(AppThemeMode mode) async {
@@ -92,10 +138,9 @@ class _SmartHealthAppState extends State<SmartHealthApp> {
     _saveAlertsEnabled(enabled);
   }
 
-
-
   @override
   Widget build(BuildContext context) {
+
     if (_locale == null) {
       return const MaterialApp(
         home: Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -104,8 +149,9 @@ class _SmartHealthAppState extends State<SmartHealthApp> {
 
     return FutureBuilder(
       future: Future.wait([
-        Future.value(StorageService().getUserProfile()),
+        Future(() async => StorageService().getUserProfile()),
         StorageService().isProfileCompleted(),
+        StorageService().isSetupCompleted(), // ✅ هنا
       ]),
       builder: (context, AsyncSnapshot<List<dynamic>> snapshot) {
         Widget initialScreen;
@@ -114,26 +160,124 @@ class _SmartHealthAppState extends State<SmartHealthApp> {
           initialScreen = const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
+        }  else if (snapshot.hasError) {
+          initialScreen = Scaffold(
+            body: Center(child: Text('Error: ${snapshot.error}')),
+          );
         } else {
-          final UserProfile? profile = snapshot.data![0];
-          // ignore: unused_local_variable
-          final bool isCompleted = snapshot.data![1];
+          final data = snapshot.data!;
+          final UserProfile? profile = data[0] as UserProfile?;
+          final bool isCompleted = data[1] as bool? ?? false;
+          final bool setupCompleted = data[2] as bool? ?? false; // ✅ جبتها من snapshot.data
 
 
-          if (profile == null) {
+          if (!setupCompleted) {
+            initialScreen = const SetupScreen(); // هتعمل SetupScreen جديد
+          } else if (profile == null || !isCompleted) {
             initialScreen = const EditProfileScreen();
-
-
           } else {
-            initialScreen = const  WelcomeScreen();
+            initialScreen = const WelcomeScreen();
           }
+
         }
 
+
         return MaterialApp(
-          title: 'Smart Health Kit',
+          navigatorKey: navigatorKey, // ✅ هنا أضفها
+          title: 'T-MED',
           debugShowCheckedModeBanner: false,
-          theme: ThemeData.light(),
-          darkTheme: ThemeData.dark(),
+          theme:ThemeData(
+          brightness: Brightness.light,
+          primaryColor: Colors.teal,
+
+          scaffoldBackgroundColor: Colors.grey[100],
+
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            elevation: 0,
+          ),
+
+          cardTheme: CardThemeData(
+            color: Colors.white,
+            elevation: 3,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+
+          iconTheme: const IconThemeData(
+            color: Colors.teal,
+          ),
+
+          colorScheme: ColorScheme.light(
+            primary: Colors.teal,
+            secondary: Colors.tealAccent,
+          ),
+
+          textTheme: const TextTheme(
+            titleLarge: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+            titleMedium: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+            bodyMedium: TextStyle(
+              fontSize: 14,
+              color: Colors.black87,
+            ),
+          ),
+        ),
+          darkTheme: ThemeData(
+            brightness: Brightness.dark,
+            primaryColor: Colors.teal,
+
+            scaffoldBackgroundColor: const Color(0xFF121212),
+
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Color(0xFF1E1E1E),
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+
+            cardTheme: CardThemeData(
+              color: const Color(0xFF1E1E1E),
+              elevation: 3,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+
+            iconTheme: const IconThemeData(
+              color: Colors.tealAccent,
+            ),
+
+            colorScheme: ColorScheme.dark(
+              primary: Colors.teal,
+              secondary: Colors.tealAccent,
+            ),
+
+            textTheme: const TextTheme(
+              titleLarge: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              titleMedium: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+              bodyMedium: TextStyle(
+                fontSize: 14,
+                color: Colors.white70,
+              ),
+            ),
+          ),
           themeMode: _themeMode == AppThemeMode.dark ? ThemeMode.dark : ThemeMode.light,
           locale: _locale ?? const Locale('ar'),
           localizationsDelegates: const [
@@ -159,6 +303,9 @@ class _SmartHealthAppState extends State<SmartHealthApp> {
               ? const Scaffold(body: Center(child: CircularProgressIndicator()))
               : initialScreen,
           onGenerateRoute: (settings) {
+            AppLogger.logInfo("🔗 Navigating to: ${settings.name}");
+            AppLogger.logInfo("📌 Requested route: ${settings.name}");
+
             switch (settings.name) {
               case '/profile':
                 return createFadeRoute(const ProfileScreen());

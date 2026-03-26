@@ -2,6 +2,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/health_data.dart';
 import 'smart_device.dart';
 import '../utils/logger.dart';
+import '../models/thermometer_reading.dart';
 
 class Thermometer extends SmartDevice {
   @override
@@ -18,7 +19,6 @@ class Thermometer extends SmartDevice {
 
   @override
   String get deviceName => 'ADF-B33A';
-
 
   @override
   Future<void> connect(BluetoothDevice device) async {
@@ -38,14 +38,18 @@ class Thermometer extends SmartDevice {
 
     double tempValue = data[1] + data[2] / 100;
 
-    final reading = HealthData(
-      type: 'temperature',
-      value: tempValue,
-      timestamp: DateTime.now(),
+    final tReading = ThermometerReading(
+      temperature: tempValue,
+      datetime: DateTime.now(),
+      source: "ADF-B33A",
+      raw: {"data": data},
+      unit: '°C',
     );
 
-    AppLogger.logInfo('🌡️ Temperature reading: $tempValue °C');
+    final reading = HealthData.fromThermometer(tReading);
+    AppLogger.logInfo('🌡️ Temp: ${tReading.temperature} ${reading.unit}');
     return reading;
   }
-}
+  }
+
 

@@ -1,10 +1,49 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.smart_health_home_kit">
+    package="com.example.smart_health_home_kit"
+    xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Bluetooth Permissions -->
+    <uses-permission android:name="android.permission.BLUETOOTH" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
+
+
+    <!-- Android 12+ Permissions -->
+    <!--noinspection uses-permission-flag -->
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="31"/>
+
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT"
+        tools:targetApi="31"/>
+    <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
+
+    <!-- Notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Background Location -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+
+    <!-- تأكيد دعم BLE -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
+
+
+
+    <!-- ✅ التطبيق -->
     <application
-        android:label="Smart Health"
-        android:name="${applicationName}"
+        android:label="T-MED"
+        android:name="androidx.multidex.MultiDexApplication"
         android:icon="@mipmap/ic_launcher">
+
+        <meta-data
+            android:name="android.bluetooth.permission.BLUETOOTH_SCAN"
+            android:value="To scan nearby health devices" />
+        <meta-data
+            android:name="android.bluetooth.permission.BLUETOOTH_CONNECT"
+            android:value="To connect to your health monitoring devices" />
+
 
         <activity
             android:name=".MainActivity"
@@ -16,14 +55,14 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
-            <!-- Theme يظهر أثناء تشغيل Flutter -->
+            <!-- Theme أثناء تشغيل Flutter -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
             <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
@@ -32,13 +71,28 @@
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@mipmap/ic_launcher" />
+
+
     </application>
 
-    <!-- لإذن رؤية الأنشطة الخاصة بالـ Process Text -->
+    <!-- إذن رؤية الأنشطة الخاصة بالـ Process Text -->
+    <!-- ❗ ضروري علشان scan يشتغل في release -->
     <queries>
         <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
+            <action android:name="android.intent.action.PROCESS_TEXT" />
+            <data android:mimeType="text/plain" />
+        </intent>
+        <intent>
+            <action android:name="android.bluetooth.adapter.action.REQUEST_ENABLE" />
+        </intent>
+        <intent>
+            <action android:name="android.bluetooth.device.action.FOUND"/>
+        </intent>
+        <intent>
+            <action android:name="android.bluetooth.device.action.CLASS_CHANGED"/>
         </intent>
     </queries>
 

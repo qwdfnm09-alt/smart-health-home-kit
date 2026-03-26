@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'dart:developer' as developer;
 
 class AppLogger {
   /// 🟢 طباعة رسالة معلومات
@@ -19,6 +20,17 @@ class AppLogger {
   static void logWarning(String message) {
     if (kDebugMode) {
       print('⚠️ [WARNING]: $message');
+    }
+  }
+
+  static void log(String message) {
+    // ✅ استخدم developer.log بدلاً من print (مسموح في release)
+    developer.log('[SmartHealthKit] $message');
+  }
+
+  static void debug(String message) {
+    if (kDebugMode) {
+      print('[DEBUG] $message');
     }
   }
 }

@@ -4,110 +4,326 @@ import '../models/health_data.dart';
 import '../models/user_profile.dart';
 import '../models/health_alert.dart';
 import 'package:flutter/material.dart'; // ✅ ده بيحتوي على كلاس Locale
+import '../utils/constants.dart';
+import '../utils/logger.dart';
+import 'advice_engine.dart';
+import '../models/health_advice.dart';
+import '../models/personality_type_adapter.dart';
+import '../models/adapters/advice_category_adapter.dart';
+import '../models/adapters/advice_priority_adapter.dart';
+import '../models/adapters/advice_risk_adapter.dart';
+import 'alert_service.dart';
+
+
+
+
 
 class StorageService {
   static final StorageService _instance = StorageService._internal();
-
   factory StorageService() => _instance;
-
   StorageService._internal();
 
+  // 🔹 Save flag
+  Future<void> setSetupCompleted(bool value) async {
+    var box = Hive.box('app_settings');
+    await box.put('setupCompleted', value);
+  }
+
+// 🔹 Read flag
+  Future<bool> isSetupCompleted() async {
+    var box = Hive.box('app_settings');
+    return box.get('setupCompleted', defaultValue: false);
+  }
+
+
+  Box<HealthData>? _bpDataBox;
+  Box<HealthData>? _glucoseDataBox;
+  Box<HealthData>? _tempDataBox;
   Box<HealthData>? _healthDataBox;
-
-
   Box<UserProfile>? _userProfileBox;
   Box<HealthAlert>? _alertBox;
   final _secureStorage = const FlutterSecureStorage();
 
-  Box<HealthData> get healthDataBox {
-    if (_healthDataBox == null) {
-      throw Exception("healthDataBox has not been initialized. Call init() first.");
-    }
-    return _healthDataBox!;
-  }
-
-
-
-
+  static const _bpBoxName = 'bp_data';
+  static const _glucoseBoxName = 'glucose_data';
+  static const _tempBoxName = 'temp_data';
   static const _encryptionKeyName = 'hive_encryption_key';
-  static const _encryptionEnabledKey = 'encryption_enabled';  // مفتاح جديد لتخزين حالة التشفير
+  static const _encryptionEnabledKey = 'encryption_enabled';
+
+  Box<HealthData> get healthDataBox => Hive.box<HealthData>('health_data');
+
 
   Future<void> init() async {
+    // 🆕 نقفل أي Boxes مفتوحة قبل ما نعيد الفتح (Restart نظيف)
+    await Hive.close();
     await Hive.initFlutter();
+    await Hive.openBox('app_settings');
 
-    // التأكد من تسجيل الـ Adapters مرة واحدة فقط
-    if (!Hive.isAdapterRegistered(0)) {
-      Hive.registerAdapter(HealthDataAdapter());
-    }
-    if (!Hive.isAdapterRegistered(1)) {
-      Hive.registerAdapter(UserProfileAdapter());
-    }
-    if (!Hive.isAdapterRegistered(2)) {
-      Hive.registerAdapter(HealthAlertAdapter());
+
+
+    // Register Adapters
+    if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(HealthDataAdapter());
+    if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(UserProfileAdapter());
+    if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(HealthAlertAdapter());
+    if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(PersonalityTypeAdapter());
+    if (!Hive.isAdapterRegistered(10)) Hive.registerAdapter(HealthAdviceAdapter());
+    if (!Hive.isAdapterRegistered(11)) Hive.registerAdapter(AdviceCategoryAdapter());
+    if (!Hive.isAdapterRegistered(12)) Hive.registerAdapter(AdvicePriorityAdapter());
+    if (!Hive.isAdapterRegistered(13)) Hive.registerAdapter(AdviceRiskAdapter());
+
+
+
+
+
+    // ✅ نشوف هل التشفير شغال ولا لأ
+    final encryptionEnabled = await isEncryptionEnabled();
+    List<int>? key;
+    if (encryptionEnabled) {
+      key = await _getEncryptionKey();
     }
 
-    final key = await _getEncryptionKey();
+
+    // ✅ نفتح الـ Boxes مع أو من غير encryption
+    _bpDataBox = await Hive.openBox<HealthData>(
+      _bpBoxName,
+      encryptionCipher: encryptionEnabled ? HiveAesCipher(key!) : null,
+    );
+
+    _glucoseDataBox = await Hive.openBox<HealthData>(
+      _glucoseBoxName,
+      encryptionCipher: encryptionEnabled ? HiveAesCipher(key!) : null,
+    );
+
+    _tempDataBox = await Hive.openBox<HealthData>(
+      _tempBoxName,
+      encryptionCipher: encryptionEnabled ? HiveAesCipher(key!) : null,
+    );
 
     _healthDataBox = await Hive.openBox<HealthData>(
       'health_data',
-      encryptionCipher: HiveAesCipher(key),
+      encryptionCipher: encryptionEnabled ? HiveAesCipher(key!) : null,
     );
 
     _userProfileBox = await Hive.openBox<UserProfile>(
       'user_profile',
-      encryptionCipher: HiveAesCipher(key),
+      encryptionCipher: encryptionEnabled ? HiveAesCipher(key!) : null,
     );
 
     _alertBox = await Hive.openBox<HealthAlert>(
       'alerts',
-      encryptionCipher: HiveAesCipher(key),
+      encryptionCipher: encryptionEnabled ? HiveAesCipher(key!) : null,
     );
+
+    // 🧠 Advice
+    await Hive.openBox<HealthAdvice>(
+      'adviceBox',
+      encryptionCipher: encryptionEnabled ? HiveAesCipher(key!) : null,
+    );
+
+
+    await Hive.openBox('remindLaterBox');
+
   }
 
 
-  Future<List<int>> _getEncryptionKey() async {
-    String? storedKey = await _secureStorage.read(key: _encryptionKeyName);
 
-    if (storedKey == null) {
+  Future<List<int>> _getEncryptionKey() async {
+    try {
+      String? storedKey = await _secureStorage.read(key: _encryptionKeyName);
+      if (storedKey == null) {
+        final key = Hive.generateSecureKey();
+        await _secureStorage.write(
+          key: _encryptionKeyName,
+          value: key.join(','),
+        );
+        return key;
+      }
+      return storedKey.split(',').map(int.parse).toList();
+    } catch (e) {
+      // 🔥 Key mismatch → regenerate
+      await _secureStorage.deleteAll();
       final key = Hive.generateSecureKey();
       await _secureStorage.write(
         key: _encryptionKeyName,
         value: key.join(','),
       );
       return key;
-    } else {
-      return storedKey.split(',').map((e) => int.parse(e)).toList();
     }
   }
 
 
-  // -------- Encryption Enabled --------
+  // -------- Encryption --------
   Future<void> setEncryptionEnabled(bool enabled) async {
     await _secureStorage.write(key: _encryptionEnabledKey, value: enabled ? 'true' : 'false');
   }
 
   Future<bool> isEncryptionEnabled() async {
-    final value = await _secureStorage.read(key: _encryptionEnabledKey);
-    if (value == null) return false; // القيمة الافتراضية: التشفير غير مفعل
-    return value == 'true';
+    try {
+      final value = await _secureStorage.read(key: _encryptionEnabledKey);
+      return value == 'true';
+    } catch (e) {
+      // 🔥 SecureStorage corrupted
+      await _secureStorage.deleteAll();
+      return false;
+    }
   }
+
 
   // -------- Health Data --------
-  Future<void> addHealthData(HealthData data) async {
-    await _healthDataBox?.add(data);
+  Future<void> saveHealthData(HealthData data) async {
+    try {
+      // نسخة للـ health_data العام
+      final clone1 = data.copyWith(
+        value: data.value,
+        unit: data.unit,
+        extra: data.extra,
+      );
+      await _healthDataBox?.add(clone1);
+
+      // نسخة تانية للـ نوع الجهاز
+      final clone2 = data.copyWith(
+        value: data.value,
+        unit: data.unit,
+        extra: data.extra,
+      );
+      await addHealthData(clone2);
+      // 🔔 هنا الحل
+      await AlertService.checkAndGenerateAlert(data);
+
+
+      AppLogger.logInfo("✅ HealthData stored with → value: ${clone2.value}, extra: ${clone2.extra}");
+    } catch (e) {
+      AppLogger.logError("❌ Error saving HealthData: $e");
+    }
   }
+
+
+  Future<void> addHealthData(HealthData data) async {
+    try {
+
+
+      switch (data.type) {
+        case DataTypes.bp:
+          if (_bpDataBox?.isOpen ?? false) {
+            await _bpDataBox?.add(data.copyWith());
+            await _bpDataBox?.put('latest', data.copyWith() );
+            AppLogger.logInfo("💾 Saved BP data: ${data.toString()}");
+          }
+          break;
+        case DataTypes.glucose:
+          if (_glucoseDataBox?.isOpen ?? false) {
+            await _glucoseDataBox?.add(data.copyWith());
+            await _glucoseDataBox?.put('latest', data.copyWith() ); // لو glucose
+            AppLogger.logInfo("💾 Saved Glucose data: ${data .toString()}");
+          }
+          break;
+        case DataTypes.temp:
+          if (_tempDataBox?.isOpen ?? false) {
+            await _tempDataBox?.add(data.copyWith());
+            await _tempDataBox?.put('latest', data.copyWith()); // لو temp
+            AppLogger.logInfo("💾 Saved Temp data: ${data.toString()}");
+          }
+          break;
+        default:
+          AppLogger.logInfo(
+              "⚠️ Unknown type: ${data.type}, saved in health_data only");
+      }
+    }
+    catch (e) {
+      AppLogger.logError("❌ Error adding HealthData: $e");
+    }
+  }
+
 
   List<HealthData> getAllHealthData() {
-    return _healthDataBox?.values.toList() ?? [];
+    final all = _healthDataBox?.values.toList() ?? [];
+    all.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return all;
   }
 
-  Stream<BoxEvent> healthDataStream() {
-    return _healthDataBox!.watch();
+
+  List<HealthData> getAllByType(String type) {
+    List<HealthData> all = [];
+    switch (type) {
+      case DataTypes.bp:
+        all = _bpDataBox?.values.toList() ?? [];
+        break;
+      case DataTypes.glucose:
+        all = _glucoseDataBox?.values.toList() ?? [];
+        break;
+      case DataTypes.temp:
+        all = _tempDataBox?.values.toList() ?? [];
+        break;
+    }
+    all.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return all;
+  }
+
+
+
+  HealthData? getLatestByType(String type) {
+    switch (type) {
+      case DataTypes.bp:
+        return _bpDataBox?.get('latest');
+      case DataTypes.glucose:
+        return _glucoseDataBox?.get('latest');
+      case DataTypes.temp:
+        return _tempDataBox?.get('latest');
+      default:
+        return null;
+    }
+  }
+
+
+  Stream<BoxEvent>? healthDataStream() {
+    if (_healthDataBox != null && _healthDataBox!.isOpen) {
+      return _healthDataBox!.watch();
+    }
+    return null;
+  }
+
+
+  // -------- Advice --------
+  Future<List<HealthAdvice>> saveHealthDataWithAdvice(HealthData data) async {
+    AppLogger.logInfo("🧠 saveHealthDataWithAdvice CALLED");
+    // 1️⃣ احفظ القياس
+    await saveHealthData(data);
+
+    // 2️⃣ هات البروفايل
+    final profile = getUserProfile();
+    AppLogger.logInfo("🔥 profile = $profile");
+
+    if (profile == null) {
+      AppLogger.logError("❌ UserProfile is NULL → advice skipped");
+      return [];
+    }
+
+
+    // 3️⃣ استخدم AdviceEngine
+    final adviceList = AdviceEngine.getAdvice(data: data, profile: profile);
+    AppLogger.logInfo("🧠 Advice generated = ${adviceList.length}");
+
+    // 4️⃣ احفظ نصائح اليوم في Hive لو حابب
+    await saveHealthAdvice(adviceList);
+    return adviceList;
+  }
+
+// 🔹 وظيفة حفظ نصائح منفصلة (ممكن تستخدم في أي وقت)
+  Future<void> saveHealthAdvice(List<HealthAdvice> adviceList) async {
+    final box = Hive.box<HealthAdvice>('adviceBox');
+    for (var advice in adviceList) {
+      await box.put(advice.id, advice);
+    }
   }
 
   // -------- User Profile --------
   Future<void> saveUserProfile(UserProfile profile) async {
+    try{
     await _userProfileBox?.put('profile', profile);
+  }
+  catch (e) {
+      AppLogger.logError("❌ Error saving UserProfile: $e");
+    }
   }
 
   UserProfile? getUserProfile() {
@@ -115,8 +331,13 @@ class StorageService {
   }
 
   Future<void> updateUserProfile(UserProfile updatedProfile) async {
+    try{
     await _userProfileBox?.put('profile', updatedProfile);
+  }catch (e) {
+      AppLogger.logError("❌ Error updating UserProfile: $e");
+    }
   }
+
 
   Stream<BoxEvent> userProfileStream() {
     return _userProfileBox!.watch();
@@ -124,7 +345,11 @@ class StorageService {
 
   // -------- Alerts --------
   Future<void> addAlert(HealthAlert alert) async {
+    try{
     await _alertBox?.add(alert);
+  }catch (e) {
+      AppLogger.logError("❌ Error adding HealthAlert: $e");
+    }
   }
 
   List<HealthAlert> getAllAlerts() {
@@ -134,6 +359,16 @@ class StorageService {
   Stream<BoxEvent> alertStream() {
     return _alertBox!.watch();
   }
+
+  Future<void> deleteAlert(int key) async {
+    try {
+      await _alertBox?.delete(key);
+    } catch (e) {
+      AppLogger.logError("❌ Error deleting HealthAlert: $e");
+    }
+  }
+
+
   // -------- First Time Check --------
   Future<void> markProfileCompleted() async {
     await _secureStorage.write(key: 'profile_completed', value: 'true');
@@ -143,25 +378,47 @@ class StorageService {
     final value = await _secureStorage.read(key: 'profile_completed');
     return value == 'true';
   }
-  // -------- Locale (Language) --------
+
+  // -------- Locale --------
   Future<void> saveLocale(String languageCode) async {
     await _secureStorage.write(key: 'locale', value: languageCode);
   }
 
   Future<Locale> getSavedLocale() async {
     final code = await _secureStorage.read(key: 'locale');
-    if (code == null || code.isEmpty) return const Locale('ar'); // اللغة الافتراضية
+    if (code == null || code.isEmpty) return const Locale('ar');
     return Locale(code);
   }
-  // -------- Reset All Data --------
+
+  // -------- Reset --------
   Future<void> resetAllData() async {
     await _healthDataBox?.clear();
     await _userProfileBox?.clear();
     await _alertBox?.clear();
+    await _bpDataBox?.clear();
+    await _glucoseDataBox?.clear();
+    await _tempDataBox?.clear();
 
+    // ✅ نمسح الإعدادات من الـ secure storage
     await _secureStorage.delete(key: 'locale');
     await _secureStorage.delete(key: 'theme');
     await _secureStorage.delete(key: 'profile_completed');
-    await _secureStorage.delete(key: _encryptionEnabledKey); // حذف حالة التشفير عند إعادة التعيين
+    await _secureStorage.delete(key: _encryptionEnabledKey);
+    await _secureStorage.delete(key: _encryptionKeyName); // 🆕 أهم حاجة
+
+    // 🆕 نقفل كل الـ Boxes بعد الـ clear
+    await close();
   }
+
+  // -------- close --------
+  //مفيد لو عايز Restart للـ Hive من غير ما تعيد تشغيل الأبلكيشن
+  Future<void> close() async {
+    await _bpDataBox?.close();
+    await _glucoseDataBox?.close();
+    await _tempDataBox?.close();
+    await _healthDataBox?.close();
+    await _userProfileBox?.close();
+    await _alertBox?.close();
+  }
+
 }

@@ -2,6 +2,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../models/health_data.dart';
 import 'smart_device.dart';
 import '../utils/logger.dart';
+import '../models/glucose_reading.dart';
 
 class GlucoseMeter extends SmartDevice {
   @override
@@ -19,7 +20,6 @@ class GlucoseMeter extends SmartDevice {
   @override
   String get deviceName => 'ADF-B27'; // ← اسم الجهاز الحقيقي على البلوتوث
 
-
   @override
   Future<void> connect(BluetoothDevice device) async {
     this.device = device;
@@ -34,19 +34,20 @@ class GlucoseMeter extends SmartDevice {
 
   @override
   HealthData? handleData(List<int> data) {
-    if (data.isEmpty) return null;
+    if (data.isEmpty || data.length < 3) return null;
 
     int glucoseValue = data[1] + (data[2] << 8);
 
-    final reading = HealthData(
-      type: 'glucose',
-      value: glucoseValue.toDouble(),
-      timestamp: DateTime.now(),
+    final gReading = GlucoseReading(
+      glucose: glucoseValue,
+      datetime: DateTime.now(),
+      source: "ADF-B27",
+      raw: {"data": data},
+      unit: 'mg/dL',
     );
 
-    AppLogger.logInfo('🩸 Glucose reading: ${reading.value} mg/dL');
+    final reading = HealthData.fromGlucose(gReading);
+    AppLogger.logInfo('🩸 Glucose: ${gReading.glucose} ${reading.unit}');
     return reading;
   }
 }
-
-

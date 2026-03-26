@@ -1,13 +1,13 @@
 // lib/models/glucose_reading.dart
 class GlucoseReading {
-  final int value; // mg/dL (raw)
+  final int glucose; // mg/dL (raw)
   final String unit; // "mg/dL" أو "mmol/L"
   final DateTime datetime; // وقت القياس من الجهاز (أو الوقت الحالي لو مش موجود)
   final String source; // device type / name
   final Map<String, dynamic>? raw; // optional raw map for debugging
 
   GlucoseReading({
-    required this.value,
+    required this.glucose,
     required this.unit,
     required this.datetime,
     required this.source,
@@ -32,7 +32,7 @@ class GlucoseReading {
     final source = (map['device'] ?? map['source'] ?? 'glucose').toString();
 
     return GlucoseReading(
-      value: value,
+      glucose: value,
       unit: unit,
       datetime: datetime,
       source: source,
@@ -43,15 +43,15 @@ class GlucoseReading {
   /// convenience: return mmol/L approx (if unit in mg/dL)
   double get mmolL {
     if (unit.toLowerCase().contains('mg')) {
-      return value / 18.0;
+      return glucose.toDouble() / 18.0;
     }
     // assume already mmol/L
-    return value.toDouble();
+    return glucose.toDouble();
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'value': value,
+      'value': glucose,
       'unit': unit,
       'datetime': datetime.toIso8601String(),
       'source': source,

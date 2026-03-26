@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import '../devices/thermometer.dart';
 import '../models/health_data.dart';
 import '../services/ble_service.dart';
 import '../services/storage_service.dart';
 import '../services/alert_service.dart';
 import '../services/pdf_service.dart';
-import '../l10n/app_localizations.dart'; // ✅ الترجمة
+import '../l10n/app_localizations.dart';
 import '../utils/helper.dart';
 import '../utils/constants.dart';
+import 'dart:async';
+import '../utils/device_type.dart';
+import '../models/thermometer_reading.dart';
+import '../utils/logger.dart';
+
 
 
 
@@ -32,132 +38,106 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
   // ======= Improvements =======
   bool _isConnecting = false;
   String _selectedFilter = 'week'; // day | week | month
-  int _retryCount = 0;
-  final int _maxRetries = 3;
-  bool _dialogShown = false;
+  StreamSubscription<Map<String, dynamic>>? _parsedSub;
   // ============================
 
+  VoidCallback? _boxListener;
 
   @override
   void initState() {
     super.initState();
+
+    // listen to hive box changes so screen updates when new data saved
+    final box = StorageService().healthDataBox;
+    _boxListener = () {
+      // when box changes, reload readings from storage
+      _loadReadings();
+    };
+    box.listenable().addListener(_boxListener!);
+
+    _loadReadings(); // // ✅ تحديث القائمة بعد كل قراءة جديدة
+
+    // ✅ لو متصل مسبقًا
     if (_bleService.isConnected) {
       // ✅ لو الجهاز لسه متوصل مفيش داعي تعيد الاتصال
       _loadReadings();
-    } else {
-      _startBLEConnection();
     }
-    _loadReadings();
-    Future.delayed(Duration.zero, () {
-      if (!_dialogShown) {
-        _dialogShown = true; // ✅ مش هيظهر تاني
-        _showConnectDialog(); // ✅ نعرض خيار الاتصال
+
+    // ✅ استمع للداتا المتفككة من DataParser
+    _parsedSub = _bleService.onParsedData.listen((parsed) async {
+      if (parsed['device'] == 'thermometer') {
+        final t = ThermometerReading.fromMap(parsed);
+        final healthData = HealthData(
+          type: 'temperature',
+          value: t.temperature,
+          unit: t.unit,
+          timestamp: t.datetime,
+          source: t.source,
+        );
+
+        // 1️⃣ احفظ القياس
+        await _storage.addHealthData(healthData);
+        // 2️⃣ هات بيانات المستخدم (لازم await)
+        final userProfile = _storage.getUserProfile();
+        if (userProfile == null) return;
+        // 4️⃣ احفظ النصائح
+        await _storage.saveHealthDataWithAdvice(healthData);
+        // 5️⃣ Alerts
+          AlertService.checkForAlert(healthData);
+        // 6️⃣ UI update
+          setState(() {
+            _latestReading = healthData;
+            _allReadings.insert(0, healthData);
+            _isConnecting = false;
+          });
+
+          _loadReadings(); // ✅ تحديث القائمة بعد كل قراءة جديدة
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("تم حفظ قراءة الحرارة ")),
+            );
+          }
       }
     });
   }
 
-  void _showConnectDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("الاتصال بجهاز الحرارة"),
-        content: const Text("هل ترغب في الاتصال تلقائيًا بالجهاز الآن؟"),
-        actions: [
-          TextButton(
-            child: const Text("لا"),
-            onPressed: () => Navigator.pop(context),
-          ),
-          ElevatedButton(
-            child: const Text("نعم"),
-            onPressed: () {
-              Navigator.pop(context);
-              _startBLEConnection(); // ✅ يبدأ الاتصال بعد الموافقة
-            },
-          ),
-        ],
-      ),
-    );
-  }
+
 
 
   void _startBLEConnection() {
     if (_bleService.isConnected) return; // ✅ منع إعادة الاتصال لو متصل بالفعل
-    _isConnecting = true;
 
-    setState(() {});
+    setState(() => _isConnecting = true);
 
 
     _bleService.scanAndConnectTo(
-      onError: () {
-        _retryCount++;
-        if (_retryCount <= _maxRetries) {
-          // ✅ عرض رسالة للمستخدم
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text("إعادة المحاولة... ($_retryCount/$_maxRetries)"),
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          }
-
-          Future.delayed(const Duration(seconds: 5), _startBLEConnection);
-        } else {
-          setState(() => _isConnecting = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("فشل الاتصال بعد عدة محاولات!")),
-          );
-        }
-      },
-
       targetName: _thermometer.deviceName,
       serviceUuid: _thermometer.serviceUuid,
       notifyCharUuid: _thermometer.notifyCharUuid,
-      onData: (data) async {
-        _retryCount = 0; // ✅ إعادة تعيين العدّاد عند النجاح
-        final parsed = _thermometer.handleData(data);
-        if (data.isEmpty) {
-          setState(() => _isConnecting = false);
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("فشل الاتصال بالجهاز!")),
-            );
-          }
-          return;
-        }
-
-        
-
-        if (parsed != null) {
-          await _storage.addHealthData(parsed);
-          await AlertService.checkForAlert(parsed);
-
-          setState(() {
-            _latestReading = parsed;
-            _allReadings.insert(0, parsed);
-            _isConnecting = false; // ✅ بعد الاتصال نوقف حالة التحميل
-          });
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("تم حفظ القراءة بنجاح")),
-            );
-          }
-        }
+      deviceType: DeviceType.thermometer,
+      onData: (_) {}, // ✅ ضيف دي فاضية
+      onError: () {
+        AppLogger.logInfo("❌ Connection failed - check name/uuid/permissions");
+        setState(() => _isConnecting = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("فشل الاتصال")),
+        );
       },
     );
   }
 
+
   void _loadReadings() {
     final all = _storage
         .getAllHealthData()
-        .where((d) => d.type == 'temperature')
+        .where((d) => d.type == DataTypes.temp)
         .toList();
     all.sort((a, b) => b.timestamp.compareTo(a.timestamp));
     setState(() {
       _allData.clear();
       _allData.addAll(all);   // ✅ عشان الفلترة تشتغل صح
-    _allReadings = all.take(20).toList(); // ✅ عرض آخر 20 قراءة فقط
+    _allReadings = all; // ✅ عرض آخر 20 قراءة فقط
     if (_allReadings.isNotEmpty) _latestReading = _allReadings.first;
     });
   }
@@ -188,9 +168,14 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
     final profile = _storage.getUserProfile();
     if (profile == null) return;
 
-    final file = await PdfService.generateTemperatureReport(
+    final allData = _storage
+        .getAllHealthData()
+        .where((d) => d.type == DataTypes.temp)
+        .toList();
+
+    final file = await PdfService.generateReport(
       profile: profile,
-      data: _allReadings,
+      healthDataList: allData,
     );
 
     if (!mounted) return;
@@ -200,6 +185,140 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
 
       await PdfService.openFile(file);
 
+  }
+
+  Widget _buildLatestReadingCard(AppLocalizations t) {
+    if (_latestReading == null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Center(child: Text(t.noReading)),
+        ),
+      );
+    }
+
+    final isOut = Helper.isOutOfRangeByType(
+      _latestReading!.type,
+      _latestReading!.value,
+      Constants.alertThresholds,
+    );
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: isOut
+              ? [Colors.red.shade300, Colors.red.shade600]
+              : [Colors.green.shade300, Colors.green.shade600],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.thermostat, color: Colors.white),
+              const SizedBox(width: 6),
+              Text(t.lastReading, style: const TextStyle(color: Colors.white70)),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            "${_latestReading!.value} °C",
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          Text(
+            isOut
+                ? " ${t.outOfRangeWarning}"
+                : " ${t.withinNormalRange}",
+            style: const TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            Helper.formatDate(_latestReading!.timestamp),
+            style: const TextStyle(color: Colors.white70),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummary(AppLocalizations t) {
+    final inRange = _allReadings.where((d) =>
+    !Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)).length;
+
+    final outRange = _allReadings.where((d) =>
+        Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)).length;
+
+    return Row(
+      children: [
+        Expanded(child: _buildStatCard(t.withinNormalRange, inRange, Colors.green)),
+        const SizedBox(width: 10),
+        Expanded(child: _buildStatCard(t.outOfRangeWarning, outRange, Colors.red)),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String title, int value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+      Icon(
+        color == Colors.green ? Icons.check_circle : Icons.warning,
+        color: color,
+        size: 28,
+      ),
+      const SizedBox(height: 6),
+          Text(title, style: TextStyle(color: color)),
+          const SizedBox(height: 6),
+          Text(
+            "$value",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReadingItem(HealthData data, AppLocalizations t) {
+    final isOut = Helper.isOutOfRangeByType(
+        data.type, data.value, Constants.alertThresholds);
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: ListTile(
+        leading: Icon(
+          isOut ? Icons.warning : Icons.check_circle,
+          color: isOut ? Colors.red : Colors.green,
+        ),
+        title: Text(
+          "${data.value} °C",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isOut ? Colors.red : Colors.green,
+          ),
+        ),
+        subtitle: Text(Helper.formatDate(data.timestamp)),
+      ),
+    );
   }
 
   Widget _buildChart(AppLocalizations t) {
@@ -322,6 +441,12 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
   @override
   void dispose() {
     // تأكد من تنظيف أي اتصال/اشتراك في BleService
+    _parsedSub?.cancel();
+    try {
+      if (_boxListener != null) {
+        StorageService().healthDataBox.listenable().removeListener(_boxListener!);
+      }
+    } catch (_) {}
     _bleService.disconnect();
     super.dispose();
   }
@@ -336,7 +461,10 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
         title: Text(t.thermometerDevice),
         actions: [
           IconButton(
-            icon: const Icon(Icons.bluetooth),
+            icon: Icon(
+              _bleService.isConnected ? Icons.bluetooth_connected : Icons.bluetooth,
+              color: _bleService.isConnected ? Colors.green : null,
+            ),
             onPressed: _startBLEConnection,
           ),
 
@@ -363,160 +491,82 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("🌡️ ${t.lastReading}", style: const TextStyle(fontSize: 18)),
-
-                      _latestReading != null
-                          ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [Text(
-                          Helper.formatValueByType(_latestReading!.type, _latestReading!.value),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Helper.isOutOfRangeByType(
-                              _latestReading!.type,
-                              _latestReading!.value,
-                              Constants.alertThresholds,
-                            )
-                                ? Colors.red
-                                : Colors.green,
-                          ),
-                        ),
-                          Text(
-                            Helper.isOutOfRangeByType(
-                              _latestReading!.type,
-                              _latestReading!.value,
-                              Constants.alertThresholds,
-                            )
-                                ? "⚠ ${t.outOfRangeWarning}"
-                                : "✅ ${t.withinNormalRange}",
-                            style: const TextStyle(fontSize: 12),
-                          ),
-                          Text(
-                            Helper.formatDate(_latestReading!.timestamp),
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                          if (!_isConnecting)
-                            ElevatedButton.icon(
-                              onPressed: _startBLEConnection,
-                              icon: const Icon(Icons.bluetooth),
-                              label: Text(t.reconnect),
-                            ),
-                        ],
-                      )
-                          : Text(t.noReading),
                       const SizedBox(height: 24),
+                      // 🔥 كارت آخر قراءة
+                      _buildLatestReadingCard(t),
 
+                      const SizedBox(height: 16),
+                      // 🔥 Summary
+                      _buildSummary(t),
+
+                      const SizedBox(height: 10),
+                      Divider(color: Colors.grey.shade300),
+
+                      const SizedBox(height: 16),
+
+                     // 🔥 Chart
                       Card(
-                        color: Colors.grey.shade100,
-                        margin: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(12),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text("ملخص القراءات:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 8),
-
                               Row(
                                 children: [
-                                  const Icon(Icons.check_circle, color: Colors.green, size: 18),
-                                  const SizedBox(width: 6),
-                                  Text("داخل النطاق: ${_allReadings.where((d) => !Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)).length}"),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.bar_chart, color: Colors.orange),
+                                      const SizedBox(width: 6),
+                                      Text(t.chart, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                  const Spacer(),
+                                  DropdownButton<String>(
+                                    value: _selectedFilter,
+                                    items: const [
+                                      DropdownMenuItem(value: 'day', child: Text('يوم')),
+                                      DropdownMenuItem(value: 'week', child: Text('أسبوع')),
+                                      DropdownMenuItem(value: 'month', child: Text('شهر')),
+                                    ],
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _selectedFilter = value!;
+                                        _filterReadings();
+                                      });
+                                    },
+                                  ),
                                 ],
                               ),
-                              Row(
-                                children: [
-                                  const Icon(Icons.warning, color: Colors.red, size: 18),
-                                  const SizedBox(width: 6),
-                                  Text("خارج النطاق: ${_allReadings.where((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)).length}"),
-                                ],
-                              ),
+                              const SizedBox(height: 10),
+                              _buildChart(t),
                             ],
                           ),
                         ),
                       ),
 
-
-
-                      // Chart header + filter
-                      Row(
-                        children: [
-                          Text("${t.chart}:", style: const TextStyle(fontSize: 18)),
-                          const Spacer(),
-                          DropdownButton<String>(
-                            value: _selectedFilter,
-                            items: const [
-                              DropdownMenuItem(value: 'day', child: Text('يوم')),
-                              DropdownMenuItem(value: 'week', child: Text('أسبوع')),
-                              DropdownMenuItem(value: 'month', child: Text('شهر')),
-                            ],
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedFilter = value!;
-                                _filterReadings();
-                              });
-                            },
-                          ),
-                        ],
-                      ),
-
-
-
-
-                      const SizedBox(height: 8),
-                      _buildChart(t),
-
-                      Text("${t.recentReadings}:", style: const TextStyle(fontSize: 18)),
-                      const SizedBox(height: 8),
-                      ..._allReadings.map((data) {
-                        final value = Helper.formatValueByType(data.type, data.value);
-                        final isOut = Helper.isOutOfRangeByType(data.type, data.value, Constants.alertThresholds);
-                        return Card(
-                          color: data == _latestReading ? Colors.blue.shade50 : null,
-                          margin: const EdgeInsets.symmetric(vertical: 4),
-                          child: ListTile(
-                            title: Text(
-                              value,
-                              style: TextStyle(
-                                color: isOut ? Colors.red : Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            subtitle: Text(
-                              isOut ? "⚠ ${t.outOfRangeWarning}" : "✅ ${t.withinNormalRange}",
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            trailing: Text(
-                              Helper.formatDate(data.timestamp),
-                              style: const TextStyle(fontSize: 12, color: Colors.grey),
-                            ),
-                          ),
-                        );
-                      }),
-
-
-                      // Alerts section
-                       if (_allReadings.any((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds))) ...[
-                         Text("⚠️ ${t.alerts}", style: const TextStyle(fontSize: 18)),
-                         const SizedBox(height: 8),
-                         Text("عدد القراءات خارج النطاق: ${_allReadings.where((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)).length}"),
-                         const SizedBox(height: 8),
-                         ..._allReadings
-                             .where((d) => Helper.isOutOfRangeByType(
-                             d.type, d.value, Constants.alertThresholds))
-                             .map((d) => Text(
-                           "• ${Helper.formatValueByType(d.type, d.value)} (${Helper.formatDate(d.timestamp)}) خارج النطاق",
-                           style: const TextStyle(color: Colors.red),
-                         )),
-                       ]else
-                         const Text("✅ لا توجد قراءات خارج النطاق", style: TextStyle(color: Colors.green)),
-
-
-                      const SizedBox(height: 24),
-                      Text("✅ ${t.autoConnection}"),
                       const SizedBox(height: 16),
-                      Text("⚠️ ${t.smartAlertEnabled}"),
+
+                      // 🔥 Recent readings
+                      Text(t.recentReadings, style: const TextStyle(fontSize: 18)),
+
+                      const SizedBox(height: 8),
+                      if (_allReadings.isEmpty)
+                        Center(
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 40),
+                              Icon(Icons.device_thermostat, size: 60, color: Colors.grey),
+                              const SizedBox(height: 10),
+                              Text("ابدأ بقياس أول قراءة", style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
+                        )
+                      else
+                      ..._allReadings.map((data) => _buildReadingItem(data, t)),
+
+                      const SizedBox(height: 20),
                     ],
                   ),
         ),

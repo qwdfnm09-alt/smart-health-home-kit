@@ -16,13 +16,108 @@ class ReportScreen extends StatefulWidget {
   @override
   State<ReportScreen> createState() => _ReportScreenState();
 }
+enum SelectedDevice { glucose, temp, bp }
 
 class _ReportScreenState extends State<ReportScreen> {
   bool _isGenerating = false;
 
+  late List<HealthData> _allHealthData;       // كل البيانات
+  late List<HealthData> _filteredHealthData;  // بيانات الجهاز المحدد
+  SelectedDevice selectedDevice = SelectedDevice.glucose; // الجهاز الافتراضي
+
+
+  void _filterData() {
+    setState(() {
+      _filteredHealthData = _allHealthData.where((d) {
+        switch (selectedDevice) {
+          case SelectedDevice.glucose:
+            return d.type == DataTypes.glucose;
+          case SelectedDevice.temp:
+            return d.type == DataTypes.temp;
+          case SelectedDevice.bp:
+            return d.type == DataTypes.bp;
+        }
+      }).toList();
+    });
+  }
+
+  Widget _buildDeviceSelector(AppLocalizations t) {
+    return Row(
+      children: [
+        _buildDeviceCard(
+          label: t.glucose,
+          icon: Icons.bloodtype,
+          isSelected: selectedDevice == SelectedDevice.glucose,
+          onTap: () {
+            selectedDevice = SelectedDevice.glucose;
+            _filterData();
+          },
+        ),
+        const SizedBox(width: 8),
+        _buildDeviceCard(
+          label: t.temperature,
+          icon: Icons.thermostat,
+          isSelected: selectedDevice == SelectedDevice.temp,
+          onTap: () {
+            selectedDevice = SelectedDevice.temp;
+            _filterData();
+          },
+        ),
+        const SizedBox(width: 8),
+        _buildDeviceCard(
+          label: t.bloodpressure,
+          icon: Icons.monitor_heart,
+          isSelected: selectedDevice == SelectedDevice.bp,
+          onTap: () {
+            selectedDevice = SelectedDevice.bp;
+            _filterData();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeviceCard({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    final borderColor = isSelected ? Colors.blue : Colors.grey.shade300;
+    final colorScheme = Theme.of(context).colorScheme;
+    final bgColor = isSelected ? colorScheme.primary.withValues(alpha: 0.08) : Colors.transparent;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: borderColor, width: 1.5),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 24),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+
   Future<void> _generateReport() async {
     final profile = StorageService().getUserProfile();
-    final healthData = StorageService().getAllHealthData();
+    final healthData = _filteredHealthData;
 
     final t = AppLocalizations.of(context)!; // ✅ النصوص المترجمة
 
@@ -59,12 +154,13 @@ class _ReportScreenState extends State<ReportScreen> {
       );
     }
   }
-  late List<HealthData> _healthData;
+
 
   @override
   void initState() {
     super.initState();
-    _healthData = StorageService().getAllHealthData();
+    _allHealthData = StorageService().getAllHealthData();
+    _filterData(); // فلترة حسب الجهاز الافتراضي
   }
 
 
@@ -76,21 +172,41 @@ class _ReportScreenState extends State<ReportScreen> {
       appBar: AppBar(title: Text(t.healthReportTitle)), // ✅
       body: Column(
         children: [
+          const SizedBox(height: 12),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildDeviceSelector(t),
+          ),
+          const SizedBox(height: 16),
+
           Expanded(
-           child: _healthData.isEmpty
-           ? Center(child: Text(t.noDataToDisplay))
-             : RefreshIndicator(
-                   onRefresh: () async {
-                 setState(() {
-                 _healthData = StorageService().getAllHealthData();
-                  });
-                 },
-              child  : ListView.builder(
-                itemCount: _healthData.length,
+            child: _filteredHealthData.isEmpty
+                ? Center(child: Text(t.noDataToDisplay))
+                : RefreshIndicator(
+              onRefresh: () async {
+                setState(() {
+                  _allHealthData = StorageService().getAllHealthData();
+                  _filterData();
+                });
+              },
+              child: ListView.builder(
+                itemCount: _filteredHealthData.length,
                 itemBuilder: (context, index) {
-                  final data = _healthData[index];
-                  final value = Helper.formatValueByType(data.type, data.value);
-                  final isOut = Helper.isOutOfRangeByType(data.type, data.value, Constants.alertThresholds);
+                  final data = _filteredHealthData[index];
+                  final value = Helper.formatDisplayText(data);
+                  // ✅ نجمع كل الـ thresholds (سكر + حرارة + ضغط)
+                  final Map<String, dynamic> allThresholds = {
+                    ...Constants.alertThresholds,
+                    ...Constants.bpThresholds,
+                  };
+
+                  // ✅ نتحقق لو القيمة خارج النطاق لأي نوع (بما فيهم الضغط)
+                  final isOut = Helper.isOutOfRangeByType(
+                    data.type,
+                    data.value,
+                    allThresholds,
+                    data: data, // مهم علشان الـ BP فيه systolic/diastolic
+                  );
 
                   return Card(
                     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),

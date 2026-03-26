@@ -31,6 +31,52 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Widget buildInfoCard({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            Colors.blueGrey.shade800,
+            Colors.teal.shade700,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.teal.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(color: Colors.white70),
+            ),
+          ),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final local = AppLocalizations.of(context)!;
@@ -48,38 +94,129 @@ class _ProfileScreenState extends State<ProfileScreen> {
       )
           : Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
+        child: SingleChildScrollView(
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              local.profilePage,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 24),
-            Text('👤 ${local.profile}: ${_profile!.name}'),
-            const SizedBox(height: 12),
-            Text('🎂 ${local.age}: ${_profile!.age}'),
-            const SizedBox(height: 12),
-            Text('⚥ ${local.gender}: ${_profile!.gender}'),
-            const SizedBox(height: 12),
-            Text('🩺 ${local.healthConditions}: ${_profile!.conditions.join(', ')}'),
-            const SizedBox(height: 24),
-            Center(
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.edit),
-                label: Text(local.editProfile),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/edit_profile').then((_) {
-                    setState(() {
-                      _profile = StorageService().getUserProfile();
-                    });
-                  });
-                },
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.blueGrey.shade800,
+                    Colors.teal.shade700,
+                  ],
+                ),
               ),
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 10,
+                        ),
+                      ],
+                    ),
+                    child: CircleAvatar(
+                      radius: 45,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
+                      child: const Icon(Icons.person, size: 45, color: Colors.white),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    _profile!.name,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "${_profile!.age} • ${_profile!.gender}",
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ],
+              ),
+                )
             ),
-          ],
+            const SizedBox(height: 20),
+            buildInfoCard(
+              icon: Icons.person,
+              title: local.profile,
+              value: _profile!.name,
+            ),
+
+            buildInfoCard(
+              icon: Icons.cake,
+              title: local.age,
+              value: _profile!.age.toString(),
+            ),
+
+            buildInfoCard(
+              icon: Icons.wc,
+              title: local.gender,
+              value: _profile!.gender,
+            ),
+
+            buildInfoCard(
+              icon: Icons.health_and_safety,
+              title: local.healthConditions,
+              value: _profile!.conditions.join(', '),
+            ),
+            const SizedBox(height: 10),
+            Center(
+              child:Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(16),
+                  onTap: () {
+                    Navigator.pushNamed(context, '/edit_profile').then((_) {
+                      setState(() {
+                        _profile = StorageService().getUserProfile();
+                      });
+                    });
+                  },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(16),
+                    gradient: LinearGradient(
+                      colors: [
+                        Colors.teal.shade400,
+                        Colors.teal.shade700,
+                      ],
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.edit, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Text(
+                        local.editProfile,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              ),
+            )],
         ),
       ),
+      )
     );
   }
 }

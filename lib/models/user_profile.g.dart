@@ -21,13 +21,14 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       age: fields[1] as int,
       gender: fields[2] as String,
       conditions: (fields[3] as List).cast<String>(),
+      personality: fields[4] as PersonalityType,
     );
   }
 
   @override
   void write(BinaryWriter writer, UserProfile obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.name)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class UserProfileAdapter extends TypeAdapter<UserProfile> {
       ..writeByte(2)
       ..write(obj.gender)
       ..writeByte(3)
-      ..write(obj.conditions);
+      ..write(obj.conditions)
+      ..writeByte(4)
+      ..write(obj.personality);
   }
 
   @override

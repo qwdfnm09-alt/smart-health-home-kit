@@ -9,7 +9,7 @@ class AppLocalizationsAr extends AppLocalizations {
   AppLocalizationsAr([String locale = 'ar']) : super(locale);
 
   @override
-  String get appTitle => ' الصحة الذكية';
+  String get appTitle => ' T-MED';
 
   @override
   String get homeTitle => 'أجهزة الصحة الذكية';
@@ -108,7 +108,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get unknownDevice => 'جهاز غير معروف';
 
   @override
-  String get smartDevices => 'أجهزة الصحة الذكية';
+  String get smartDevices => 'الأجهزة الذكية';
 
   @override
   String get age => 'العمر';
@@ -117,7 +117,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get gender => 'النوع';
 
   @override
-  String get healthConditions => 'الحالات الصحية';
+  String get healthConditions => 'الامراض المزمنة';
 
   @override
   String get editProfile => 'تعديل الملف الشخصي';
@@ -180,10 +180,10 @@ class AppLocalizationsAr extends AppLocalizations {
   String get noDataToDisplay => 'لا توجد بيانات للعرض';
 
   @override
-  String get outOfRangeWarning => '⚠ القراءة خارج النطاق الطبيعي';
+  String get outOfRangeWarning => ' محتاج متابعة ';
 
   @override
-  String get withinNormalRange => '✅ القراءة في النطاق الطبيعي';
+  String get withinNormalRange => 'طبيعى ';
 
   @override
   String get recentReadings => 'آخر القراءات';
@@ -205,4 +205,37 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get alerts => 'التنبيهات';
+
+  @override
+  String get charts => 'الرسوم البيانية';
+
+  @override
+  String get alertDeleted => 'تم حذف التنبيه';
+
+  @override
+  String get healthadvices => 'نصائحك الصحية';
+
+  @override
+  String get dailyroutine => 'الروتين اليومى ';
+
+  @override
+  String get yourhealthconditiontoday => 'تابع صحتك بسهولة ';
+
+  @override
+  String get presstostart => 'اضغط للبدء ';
+
+  @override
+  String get services => 'الخدمات الذكية';
+
+  @override
+  String get styleofadvice => 'أسلوب النصائح';
+
+  @override
+  String get bloodpressure => 'ضغط الدم';
+
+  @override
+  String get temperature => 'الحرارة';
+
+  @override
+  String get glucose => 'سكر الدم';
 }

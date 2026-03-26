@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'SMART HEALTH';
+  String get appTitle => 'T-MED';
 
   @override
   String get homeTitle => 'Smart Health Devices';
@@ -108,7 +108,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unknownDevice => 'Unknown Device';
 
   @override
-  String get smartDevices => 'Smart Health Devices';
+  String get smartDevices => 'Smart Devices';
 
   @override
   String get age => 'Age';
@@ -181,10 +181,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noDataToDisplay => 'No data to display';
 
   @override
-  String get outOfRangeWarning => '⚠ Out of range';
+  String get outOfRangeWarning => ' Needs follow-up';
 
   @override
-  String get withinNormalRange => '✅ Within normal range';
+  String get withinNormalRange => ' normal ';
 
   @override
   String get recentReadings => 'Recent Readings';
@@ -206,4 +206,37 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get alerts => 'Alerts';
+
+  @override
+  String get charts => 'Charts';
+
+  @override
+  String get alertDeleted => 'Alert deleted';
+
+  @override
+  String get healthadvices => 'Health advices';
+
+  @override
+  String get dailyroutine => 'Daily routine';
+
+  @override
+  String get yourhealthconditiontoday => 'Wellness Made Simple';
+
+  @override
+  String get presstostart => 'Tab to start';
+
+  @override
+  String get services => 'Smart Services';
+
+  @override
+  String get styleofadvice => 'Style Of Advice';
+
+  @override
+  String get bloodpressure => 'Blood Pressure';
+
+  @override
+  String get temperature => 'Temperature';
+
+  @override
+  String get glucose => 'Glucose';
 }

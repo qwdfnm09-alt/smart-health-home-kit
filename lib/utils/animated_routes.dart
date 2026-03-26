@@ -33,6 +33,9 @@ Route createSlideRoute(Widget page) {
   );
 }
 
+
+
+
 /// Scale transition (zoom in)
 Route createScaleRoute(Widget page) {
   return PageRouteBuilder(

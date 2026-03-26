@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
-  /// **'SMART HEALTH'**
+  /// **'T-MED'**
   String get appTitle;
 
   /// No description provided for @homeTitle.
@@ -293,7 +293,7 @@ abstract class AppLocalizations {
   /// No description provided for @smartDevices.
   ///
   /// In en, this message translates to:
-  /// **'Smart Health Devices'**
+  /// **'Smart Devices'**
   String get smartDevices;
 
   /// No description provided for @age.
@@ -437,13 +437,13 @@ abstract class AppLocalizations {
   /// No description provided for @outOfRangeWarning.
   ///
   /// In en, this message translates to:
-  /// **'⚠ Out of range'**
+  /// **' Needs follow-up'**
   String get outOfRangeWarning;
 
   /// No description provided for @withinNormalRange.
   ///
   /// In en, this message translates to:
-  /// **'✅ Within normal range'**
+  /// **' normal '**
   String get withinNormalRange;
 
   /// No description provided for @recentReadings.
@@ -487,6 +487,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Alerts'**
   String get alerts;
+
+  /// No description provided for @charts.
+  ///
+  /// In en, this message translates to:
+  /// **'Charts'**
+  String get charts;
+
+  /// No description provided for @alertDeleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Alert deleted'**
+  String get alertDeleted;
+
+  /// No description provided for @healthadvices.
+  ///
+  /// In en, this message translates to:
+  /// **'Health advices'**
+  String get healthadvices;
+
+  /// No description provided for @dailyroutine.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily routine'**
+  String get dailyroutine;
+
+  /// No description provided for @yourhealthconditiontoday.
+  ///
+  /// In en, this message translates to:
+  /// **'Wellness Made Simple'**
+  String get yourhealthconditiontoday;
+
+  /// No description provided for @presstostart.
+  ///
+  /// In en, this message translates to:
+  /// **'Tab to start'**
+  String get presstostart;
+
+  /// No description provided for @services.
+  ///
+  /// In en, this message translates to:
+  /// **'Smart Services'**
+  String get services;
+
+  /// No description provided for @styleofadvice.
+  ///
+  /// In en, this message translates to:
+  /// **'Style Of Advice'**
+  String get styleofadvice;
+
+  /// No description provided for @bloodpressure.
+  ///
+  /// In en, this message translates to:
+  /// **'Blood Pressure'**
+  String get bloodpressure;
+
+  /// No description provided for @temperature.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature'**
+  String get temperature;
+
+  /// No description provided for @glucose.
+  ///
+  /// In en, this message translates to:
+  /// **'Glucose'**
+  String get glucose;
 }
 
 class _AppLocalizationsDelegate

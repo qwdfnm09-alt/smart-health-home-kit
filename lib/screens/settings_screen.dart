@@ -77,6 +77,77 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await StorageService().setEncryptionEnabled(value);
   }
 
+  Widget buildSettingCard({
+    required IconData icon,
+    required String title,
+    Widget? trailing,
+    String? subtitle,
+    VoidCallback? onTap, // 👈 أضف دي
+  }) {
+    return GestureDetector( // ✅ ده المهم
+        onTap: onTap,
+        child: Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          colors: [
+            Colors.blueGrey.shade800,
+            Colors.teal.shade700,
+          ],
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.teal.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // 🔥 Icon
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white),
+          ),
+
+          const SizedBox(width: 16),
+
+          // 🔥 Text
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (subtitle != null)
+                  Text(
+                    subtitle,
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+              ],
+            ),
+          ),
+
+          if (trailing != null) trailing,
+        ],
+      ),
+        )
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
@@ -92,158 +163,142 @@ class _SettingsScreenState extends State<SettingsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // اللغة
-              Text(
-                t.language,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              DropdownButton<Locale>(
-                value: _selectedLocale,
-                onChanged: (Locale? newValue) {
-                  if (newValue != null) {
-                    _changeLanguage(newValue);
-                  }
-                },
-                items: const [
-                  DropdownMenuItem(
-                    value: Locale('ar'),
-                    child: Text('العربية'),
-                  ),
-                  DropdownMenuItem(
-                    value: Locale('en'),
-                    child: Text('English'),
-                  ),
-                ],
+              buildSettingCard(
+                icon: Icons.language,
+                title: t.language,
+                subtitle: _selectedLocale.languageCode == 'ar' ? "العربية" : "English",
+                trailing: DropdownButton<Locale>(
+                  dropdownColor: Colors.blueGrey.shade800,
+                  value: _selectedLocale,
+                  underline: const SizedBox(),
+                  iconEnabledColor: Colors.white,
+                  onChanged: (Locale? newValue) {
+                    if (newValue != null) {
+                      _changeLanguage(newValue);
+                    }
+                  },
+                  items: const [
+                    DropdownMenuItem(
+                      value: Locale('ar'),
+                      child: Text('العربية', style: TextStyle(color: Colors.white)),
+                    ),
+                    DropdownMenuItem(
+                      value: Locale('en'),
+                      child: Text('English', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
 
               // الثيم
-              Text(
-                t.theme,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 12),
-              DropdownButton<AppThemeMode>(
-                value: _selectedTheme,
-                onChanged: (AppThemeMode? newTheme) {
-                  if (newTheme != null) {
-                    _changeTheme(newTheme);
-                  }
-                },
-                items: const [
-                  DropdownMenuItem(
-                    value: AppThemeMode.light,
-                    child: Text('Light'),
-                  ),
-                  DropdownMenuItem(
-                    value: AppThemeMode.dark,
-                    child: Text('Dark'),
-                  ),
-                ],
+              buildSettingCard(
+                icon: Icons.dark_mode,
+                title: t.theme,
+                subtitle: _selectedTheme == AppThemeMode.dark ? "Dark" : "Light",
+                trailing: DropdownButton<AppThemeMode>(
+                  dropdownColor: Colors.blueGrey.shade800,
+                  value: _selectedTheme,
+                  underline: const SizedBox(),
+                  iconEnabledColor: Colors.white,
+                  onChanged: (AppThemeMode? newTheme) {
+                    if (newTheme != null) {
+                      _changeTheme(newTheme);
+                    }
+                  },
+                  items: const [
+                    DropdownMenuItem(
+                      value: AppThemeMode.light,
+                      child: Text('Light', style: TextStyle(color: Colors.white)),
+                    ),
+                    DropdownMenuItem(
+                      value: AppThemeMode.dark,
+                      child: Text('Dark', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
 
               // التنبيهات
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    t.enableAlerts,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Switch(
-                    value: _alertsEnabled,
-                    onChanged: _toggleAlerts,
-                  ),
-                ],
+              buildSettingCard(
+                icon: Icons.notifications,
+                title: t.enableAlerts,
+                trailing: Switch(
+                  value: _alertsEnabled,
+                  onChanged: _toggleAlerts,
+                  activeThumbColor: Colors.white,
+                ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
 
               // زر تفعيل/ايقاف تشفير البيانات
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    t.enableDataEncryption, // تأكد تضيف المفتاح ده في الترجمة
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  Switch(
-                    value: _encryptionEnabled,
-                    onChanged: _toggleEncryption,
-                  ),
-                ],
+              buildSettingCard(
+                icon: Icons.lock,
+                title: t.enableDataEncryption,
+                trailing: Switch(
+                  value: _encryptionEnabled,
+                  onChanged: _toggleEncryption,
+                  activeThumbColor: Colors.white,
+                ),
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height:16),
 
               // بيانات المستخدم مع تغليف ببطاقة لزيادة الوضوح وترتيب الأزرار
               Text(
                 t.userData,
                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 18),
 
-              Card(
-                elevation: 3,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                  child: Column(
-                    children: [
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.edit),
-                        label: Text(t.editProfile),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
-                        ),
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/edit_profile');
-                        },
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.delete_forever),
-                        label: Text(t.resetAppData),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          minimumSize: const Size.fromHeight(48),
-                        ),
-                        onPressed: () async {
-                          final confirm = await showDialog<bool>(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: Text(t.confirmResetTitle),
-                              content: Text(t.confirmResetMessage),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, false),
-                                  child: Text(t.cancel),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context, true),
-                                  child: Text(t.confirm),
-                                ),
-                              ],
-                            ),
-                          );
+              buildSettingCard(
+                icon: Icons.person,
+                title: t.userData,
+                subtitle: t.editProfile,
+                trailing: Icon(Icons.arrow_forward_ios, color: Colors.white),
+                onTap: () {
+                  Navigator.pushNamed(context, '/edit_profile');
+                },
+              ),
 
-                          if (confirm == true) {
-                            await StorageService().resetAllData();
-                            if (!context.mounted) return; // ✅ التحقق بالطريقة الجديدة
-                            Navigator.pushNamedAndRemoveUntil(
-                              context,
-                              '/welcome',
-                                  (route) => false,
-                            );
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
+              buildSettingCard(
+                icon: Icons.delete_forever,
+                title: t.resetAppData,
+                subtitle: t.confirmResetMessage,
+                trailing: const Icon(Icons.warning, color: Colors.white),
+                onTap: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: Text(t.confirmResetTitle),
+                      content: Text(t.confirmResetMessage),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: Text(t.cancel),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: Text(t.confirm),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    await StorageService().resetAllData();
+                    if (!context.mounted) return;
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      '/welcome',
+                          (route) => false,
+                    );
+                  }
+                },
               ),
             ],
           ),

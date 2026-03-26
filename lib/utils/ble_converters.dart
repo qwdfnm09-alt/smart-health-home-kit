@@ -1,11 +1,52 @@
-// lib/utils/ble_converters.dart
-import '../models/glucose_reading.dart';
+import '../models/health_data.dart';
+import '../utils/constants.dart';
 
 
 class BleConverters {
-  static GlucoseReading toGlucose(Map<String, dynamic> m) => GlucoseReading.fromMap(m);
+  // ---------------- Glucose ----------------
+  static HealthData? toGlucoseHealth(Map<String, dynamic> m) {
+    if (!m.containsKey("glucose")) return null;
 
-// ستكمل الباقي لاحقًا:
-// static BloodPressureReading toBp(Map<String, dynamic> m) => BloodPressureReading.fromMap(m);
-// static TemperatureReading toTemp(Map<String, dynamic> m) => TemperatureReading.fromMap(m);
+    return HealthData(
+      type: "glucose",
+      value: (m["glucose"] ?? 0).toDouble(),
+      unit: m["unit"] ?? "mg/dL",
+      timestamp: DateTime.tryParse(m["timestamp"].toString()) ?? DateTime.now(),
+      extra: {
+        "glucose": (m["glucose"] ?? 0).toDouble(),
+      },
+    );
+  }
+
+  // ---------------- Thermometer ----------------
+  static HealthData? toThermometerHealth(Map<String, dynamic> m) {
+    if (!m.containsKey("temperature")) return null;
+
+    return HealthData(
+      type: DataTypes.temp,
+      value: (m["temperature"] ?? 0).toDouble(),
+      unit: m["unit"] ?? "°C",
+      timestamp: DateTime.tryParse(m["timestamp"].toString()) ?? DateTime.now(),
+      extra: {
+        "temperature": (m["temperature"] ?? 0).toDouble(),
+      },
+    );
+  }
+
+  // ---------------- Blood Pressure ----------------
+  static HealthData? toBloodPressureHealth(Map<String, dynamic> m) {
+    if (!m.containsKey("systolic") || !m.containsKey("diastolic")) return null;
+
+    return HealthData(
+      type: DataTypes.bp,
+      value: (m["systolic"] ?? 0).toDouble(), // نستخدم الـ sys كـ value
+      unit: "mmHg",
+      timestamp: DateTime.tryParse(m["timestamp"].toString()) ?? DateTime.now(),
+      extra: {
+        "systolic": (m["systolic"] ?? 0).toDouble(),
+        "diastolic": (m["diastolic"] ?? 0).toDouble(),
+        "pulse": (m["pulse"] ?? 0).toDouble(),
+      },
+    );
+  }
 }

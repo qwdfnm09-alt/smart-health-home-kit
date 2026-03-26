@@ -1,13 +1,91 @@
 import 'package:intl/intl.dart';
+import 'package:smart_health_home_kit/utils/logger.dart';
 import '../models/health_data.dart';
-
-
+import '../utils/constants.dart';
 
 class Helper {
   // تنسيق التاريخ والوقت
   static String formatDate(DateTime date, {String? locale}) {
     return DateFormat('yyyy-MM-dd – HH:mm', locale).format(date);
   }
+
+
+  static String formatDisplayText(HealthData data) {
+    final t = data.type.toLowerCase();
+
+    // BP
+    if (t == DataTypes.bp || t == 'bp' || t == 'bloodpressure' || t == 'blood_pressure' || t == 'bloodpressure') {
+      final sys = data.extra?['systolic'] ?? data.systolic ?? "-" ;
+      final dia = data.extra?['diastolic'] ?? data.diastolic ?? '-';
+      final pulse = data.extra?['pulse'] ?? data.pulse ?? '-';
+      return "BP: $sys/$dia mmHg | Pulse: $pulse bpm";
+    }
+
+    // Glucose
+    if (t == DataTypes.glucose || t == 'glucose' || t == 'gl') {
+      final val = data.extra?['glucose'] ?? data.glucose ?? data.value;
+      return "Glucose: $val mg/dL";
+    }
+
+    // Temp
+    if (t == DataTypes.temp || t == 'temp' || t == 'thermometer' || t == 'temperature') {
+      final val = data.extra?['temperature'] ?? data.temperature ?? data.value;
+      return "Temp: $val °C";
+    }
+
+    // fallback generic
+    return "${data.type} - ${data.value}";
+  }
+
+  static bool isBloodPressureAbnormal(HealthData data) {
+    // قراءة القيود من Constants.bpThresholds
+    final bpMap = Constants.bpThresholds[DataTypes.bp];
+    if (bpMap == null) return false;
+
+    final sysRange = bpMap['bp_systolic'];
+    final diaRange = bpMap['bp_diastolic'];
+    if (sysRange == null || diaRange == null) return false;
+
+    final sys = data.systolic ?? 0;   // لو null نخلي قيمة بعيدة
+    final dia = data.diastolic ?? 0;
+
+    final bool systolicOut = sys < (sysRange['min'] ?? double.negativeInfinity) ||
+        sys > (sysRange['max'] ?? double.infinity);
+    final bool diastolicOut = dia < (diaRange['min'] ?? double.negativeInfinity) ||
+        dia > (diaRange['max'] ?? double.infinity);
+
+    AppLogger.logInfo("Helper.isBloodPressureAbnormal -> sys=$sys, dia=$dia, sysRange=$sysRange, diaRange=$diaRange, result=${systolicOut||diastolicOut}");
+    return systolicOut || diastolicOut;
+  }
+
+  static bool isGlucoseAbnormal(HealthData data) {
+    final range = Constants.alertThresholds[DataTypes.glucose];
+    if (range == null) return false;
+    final val = (data.glucose ?? data.value).toDouble();
+    return val < (range['min'] ?? double.negativeInfinity) || val > (range['max'] ?? double.infinity);
+  }
+
+  static bool isTemperatureAbnormal(HealthData data) {
+    final range = Constants.alertThresholds[DataTypes.temp];
+    if (range == null) return false;
+    final val = (data.temperature ?? data.value).toDouble();
+    return val < (range['min'] ?? double.negativeInfinity) || val > (range['max'] ?? double.infinity);
+  }
+
+
+
+
+
+
+  static int getSystolic(double value) => (value ~/ 1000);
+
+  static int getDiastolic(double value) => ((value % 1000) ~/ 10);
+
+  static int getPulse(double value) => (value % 10).toInt();
+
+
+
+
 
   static List<HealthData> getOutOfRangeReadings(
       List<HealthData> readings,
@@ -20,6 +98,7 @@ class Helper {
 
   static String getOutOfRangeMessage(String type, double value, DateTime date) {
     return "• ${formatValueByType(type, value)} (${formatDate(date)}) خارج النطاق";
+
   }
 
 
@@ -60,12 +139,12 @@ class Helper {
     if (type == null || value == null) return "-";
 
     switch (type) {
-      case 'blood_pressure':
+      case DataTypes.bp:
         final bp = parseBloodPressure(value);
         return formatBloodPressure(bp['systolic']!, bp['diastolic']!);
-      case 'glucose':
+      case DataTypes.glucose:
         return formatGlucose(value);
-      case 'temperature':
+      case DataTypes.temp:
         return formatTemperature(value);
       default:
         return value.toString();
@@ -73,64 +152,84 @@ class Helper {
   }
 
 
+
   // التحقق من النطاق حسب النوع
   static bool isOutOfRangeByType(
       String type,
       double value,
-      Map<String, Map<String, double>> thresholds,
-      ) {
-    if (type == 'blood_pressure') {
-      if (!thresholds.containsKey('blood_pressure_systolic') ||
-          !thresholds.containsKey('blood_pressure_diastolic')) {
-        return false;
-      }
+      Map<String, dynamic> thresholds, {
+        HealthData? data,
+      }) {
+    if (type == DataTypes.bp) {
+      if (data == null) return false;
 
-      final bp = parseBloodPressure(value);
-      final systolic = bp['systolic']!;
-      final diastolic = bp['diastolic']!;
+      final bpRanges = thresholds[DataTypes.bp];
+      if (bpRanges == null) return false;
 
-      final sys = thresholds['blood_pressure_systolic']!;
-      final dia = thresholds['blood_pressure_diastolic']!;
+      final sysRange = bpRanges['bp_systolic'] ;
+      final diaRange = bpRanges['bp_diastolic'];
 
-      return isValueOutOfRange(systolic.toDouble(), sys['min']!, sys['max']!) ||
-          isValueOutOfRange(diastolic.toDouble(), dia['min']!, dia['max']!);
+      final sys = data.systolic ?? 0;
+      final dia = data.diastolic ?? 0;
+
+      final systolicOut =
+          sys < (sysRange['min'] ?? 0) || sys > (sysRange['max'] ?? double.infinity);
+
+      final diastolicOut =
+          dia < (diaRange['min'] ?? 0) || dia > (diaRange['max'] ?? double.infinity);
+
+      AppLogger.logInfo("SYS=${data.systolic}, DIA=${data.diastolic}, sysRange=$sysRange, diaRange=$diaRange, result=${systolicOut || diastolicOut}");
+
+      return systolicOut || diastolicOut;
     }
 
+    // باقي الأنواع (سكر، حرارة)
     if (!thresholds.containsKey(type)) return false;
 
-    final min = thresholds[type]!['min']!;
-    final max = thresholds[type]!['max']!;
-    return isValueOutOfRange(value, min, max);
+    final range = thresholds[type] as Map<String, double>;
+    final min = range['min'] ?? 0;
+    final max = range['max'] ?? double.infinity;
+
+    return value < min || value > max;
+
+
   }
+
+
+
   static bool isNormalBP(HealthData d) {
-    final v = d.value as Map;
-    return v['sys'] >= 90 && v['sys'] <= 120 && v['dia'] >= 60 && v['dia'] <= 80;
+    final sys = d.systolic ?? 0;
+    final dia = d.diastolic ?? 0;
+    return sys >= 90 && sys <= 120 && dia >= 60 && dia <= 80;
   }
 
   static bool isHighBP(HealthData d) {
-    final v = d.value as Map;
-    return v['sys'] > 130 || v['dia'] > 90;
+    final sys = d.systolic ?? 0;
+    final dia = d.diastolic ?? 0;
+    return sys > 130 || dia > 90;
   }
 
   static bool isLowBP(HealthData d) {
-    final v = d.value as Map;
-    return v['sys'] < 90 || v['dia'] < 60;
+    final sys = d.systolic ?? 0;
+    final dia = d.diastolic ?? 0;
+    return sys < 90 || dia < 60;
   }
 
+
   static bool isNormalTemp(HealthData d) {
-    if (d.type != 'temperature') return false;
+    if (d.type != DataTypes.temp) return false;
     final value = (d.value as num).toDouble();
     return value >= 36.1 && value <= 37.5; // النطاق الطبيعي
   }
 
   static bool isHighTemp(HealthData d) {
-    if (d.type != 'temperature') return false;
+    if (d.type != DataTypes.temp) return false;
     final value = (d.value as num).toDouble();
     return value > 37.5;
   }
 
   static bool isLowTemp(HealthData d) {
-    if (d.type != 'temperature') return false;
+    if (d.type != DataTypes.temp) return false;
     final value = (d.value as num).toDouble();
     return value < 36.1;
   }

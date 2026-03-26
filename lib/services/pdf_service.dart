@@ -1,6 +1,6 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart' show Colors;
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -174,49 +174,78 @@ class PdfService {
     required UserProfile profile,
     required List<HealthData> healthDataList,
   }) async {
+    // ✅ تحميل الخطوط العربية في بداية الدالة
+    final arabicFont = await rootBundle.load("assets/fonts/Cairo-Regular.ttf");
+    final arabicFontBold = await rootBundle.load("assets/fonts/Cairo-Bold.ttf");
+
+    final ttf = pw.Font.ttf(arabicFont);
+    final ttfBold = pw.Font.ttf(arabicFontBold);
     final pdf = pw.Document(
       title: "Blood Pressure Report",
       author: profile.name,
-      subject: "تحليل قراءات ضغط الدم",
-      keywords: "Blood Pressure, Health, Report",
-      creator: "Smart Health Home Kit",
+      subject: "تحليل القراءات الصحية",
+      keywords: "Health, Report",
+      creator: "T-MED TEAM ",
 
     );
 
     final now = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
 
-
-
-
     pdf.addPage(
       pw.MultiPage(
+        textDirection: pw.TextDirection.rtl,
+        theme: pw.ThemeData.withFont(
+          base: ttf,
+          bold: ttfBold,
+        ),
         build: (context) => [
-          pw.Text("تقرير الحالة الصحية", style: pw.TextStyle(
-              fontSize: 24, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+            "تقرير الحالة الصحية",
+            textDirection: pw.TextDirection.rtl,
+            style: pw.TextStyle(font: ttfBold, fontSize: 24),
+          ),
           pw.SizedBox(height: 16),
-          pw.Text("تاريخ التوليد: ${DateFormat('yyyy-MM-dd – kk:mm').format(
-              DateTime.now())}"),
+          pw.Text(
+            "Report Generated on: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}",
+            textDirection: pw.TextDirection.ltr,
+            style: pw.TextStyle(font: ttf),
+          ),
           pw.SizedBox(height: 16),
-          pw.Text("👤 بيانات المستخدم:", style: pw.TextStyle(
-              fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+              " بيانات المستخدم:",
+              style: pw.TextStyle(
+              fontSize: 18,font: ttfBold )),
           pw.Bullet(text: "الاسم: ${profile.name}"),
           pw.Bullet(text: "العمر: ${profile.age}"),
           pw.Bullet(text: "الجنس: ${profile.gender}"),
           pw.Bullet(text: "أمراض مزمنة: ${profile.conditions.join(', ')}"),
           pw.SizedBox(height: 24),
-          pw.Text("📊 القراءات الصحية:", style: pw.TextStyle(
-              fontSize: 18, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+              " القراءات الصحية:",
+              style: pw.TextStyle(
+              fontSize: 18, font: ttfBold)),
           pw.TableHelper.fromTextArray(
             headers: ['التاريخ', 'النوع', 'القيمة'],
             data: healthDataList.map((data) {
-              final value = Helper.formatValueByType(data.type, data.value);
-              final isOut = Helper.isOutOfRangeByType(data.type, data.value, Constants.alertThresholds);
+              final value = Helper.formatDisplayText(data);
+              final Map<String, dynamic> allThresholds = {
+                ...Constants.alertThresholds,
+                ...Constants.bpThresholds,
+              };
+
+              // ✅ نتحقق لو القيمة خارج النطاق لأي نوع (بما فيهم الضغط)
+              final isOut = Helper.isOutOfRangeByType(
+                data.type,
+                data.value,
+                allThresholds,
+                data: data, // مهم علشان الـ BP فيه systolic/diastolic
+              );
 
               return [
                 Helper.formatDate(data.timestamp),
                 data.type,
                 pw.Text(
-                  "$value${isOut ? " ⚠" : ""}",
+                  "$value${isOut ? "" : ""}",
                   style: pw.TextStyle(
                     color: isOut ? PdfColors.red : PdfColors.green,
                   ),
@@ -225,13 +254,26 @@ class PdfService {
             }).toList(),
           ),
           pw.SizedBox(height: 16),
-          pw.Text("ملاحظات:", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
+          pw.Text(
+              "ملاحظات:",
+              style: pw.TextStyle(fontSize: 16,font: ttfBold)),
           ...healthDataList.map((data) {
-            final isOut = Helper.isOutOfRangeByType(data.type, data.value, Constants.alertThresholds);
+            final Map<String, dynamic> allThresholds = {
+              ...Constants.alertThresholds,
+              ...Constants.bpThresholds,
+            };
+
+            // ✅ نتحقق لو القيمة خارج النطاق لأي نوع (بما فيهم الضغط)
+            final isOut = Helper.isOutOfRangeByType(
+              data.type,
+              data.value,
+              allThresholds,
+              data: data, // مهم علشان الـ BP فيه systolic/diastolic
+            );
             return pw.Text(
               isOut
-                  ? "⚠ ${data.type} خارج النطاق عند ${Helper.formatValueByType(data.type, data.value)}"
-                  : "✅ ${data.type} في النطاق الطبيعي",
+                  ? " ${data.type} خارج النطاق عند ${Helper.formatValueByType(data.type, data.value)}"
+                  : " ${data.type} في النطاق الطبيعي",
             );
           }),
         ],
@@ -479,7 +521,7 @@ class PdfService {
               "🔹 ${Helper.formatValueByType(latest.type, latest.value)} - ${Helper.formatDate(latest.timestamp)}",
               style: pw.TextStyle(
                 fontSize: 14,
-                color: Helper.isOutOfRangeByType(latest.type, latest.value, Constants.alertThresholds)
+                color: Helper.isOutOfRangeByType(latest.type, latest.value, Constants.bpThresholds)
                     ? PdfColors.red
                     : PdfColors.green,
               ),
@@ -529,12 +571,12 @@ class PdfService {
           ],
 
           // ⚠ قسم التنبيهات
-          if (data.any((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds))) ...[
+          if (data.any((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.bpThresholds))) ...[
             pw.SizedBox(height: 16),
-            pw.Text("عدد القراءات خارج النطاق: ${data.where((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)).length}"),
+            pw.Text("عدد القراءات خارج النطاق: ${data.where((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.bpThresholds)).length}"),
             pw.Text("⚠ تنبيهات:", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
             ...data.where((d) =>
-                Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)).map((d) =>
+                Helper.isOutOfRangeByType(d.type, d.value, Constants.bpThresholds)).map((d) =>
                 pw.Text(
                   "• ${Helper.formatValueByType(d.type, d.value)} (${Helper.formatDate(d.timestamp)}"
                       " (${Helper.isHighBP(d) ? "مرتفع" : Helper.isLowBP(d) ? "منخفض" : "غير محدد"})"
@@ -542,7 +584,7 @@ class PdfService {
                 )
             ),
           ],
-          if (!data.any((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)))
+          if (!data.any((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.bpThresholds)))
             pw.Text("✅ لا توجد قراءات خارج النطاق", style:const pw.TextStyle(color: PdfColors.green)),
 
           pw.Divider(thickness: 1),
@@ -556,7 +598,7 @@ class PdfService {
             for (int i = 0; i < data.length; i += 20) ...[
               ...data.skip(i).take(20).map((d) {
                 final value = Helper.formatValueByType(d.type, d.value);
-                final isOut = Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds);
+                final isOut = Helper.isOutOfRangeByType(d.type, d.value, Constants.bpThresholds);
                 return pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
@@ -623,173 +665,4 @@ class PdfService {
     await OpenFile.open(file.path);
   }
 
-  // 🌡 5. تقرير الحرارة
-  static Future<File> generateTemperatureReport({
-    required UserProfile profile,
-    required List<HealthData> data,
-  }) async {
-    final pdf = pw.Document();
-    final now = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
-    final latest = data.isNotEmpty ? data.first : null;
-    final chartImage = await _generateChartImage(data);
-
-    // ✅ ترتيب البيانات (الأحدث أولاً)
-    data.sort((a, b) => b.timestamp.compareTo(a.timestamp));
-
-
-
-    // ✅ إضافة عنوان التقرير
-    pdf.addPage(
-      pw.MultiPage(
-        footer: (context) => pw.Container(
-          alignment: pw.Alignment.center,
-          margin: const pw.EdgeInsets.only(top: 10),
-          child: pw.Text(
-            "تقرير الحرارة - ${profile.name} - ${Helper.formatDate(DateTime.now())} | صفحة ${context.pageNumber} من ${context.pagesCount}",
-            style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
-          ),
-        ),
-        build: (context) => [
-          // 🏷️ عنوان التقرير
-          pw.Text(
-            'تقرير جهاز قياس الحرارة',
-            style: pw.TextStyle(
-              fontSize: 22,
-              fontWeight: pw.FontWeight.bold,
-              decoration: pw.TextDecoration.underline, // ⬅️ خط تحت الكلمة
-            ),
-          ),
-          pw.SizedBox(height: 16),
-
-          // 👤 بيانات المريض
-          pw.Text("👤 بيانات المستخدم:", style: const pw.TextStyle(fontSize: 16)),
-          pw.Bullet(text: "الاسم: ${profile.name}"),
-          pw.Bullet(text: "العمر: ${profile.age}"),
-          pw.Bullet(text: "الجنس: ${profile.gender}"),
-          if (profile.conditions.isNotEmpty)
-            pw.Bullet(text: "أمراض مزمنة: ${profile.conditions.join(', ')}"),
-          pw.SizedBox(height: 16),
-
-          // 📌 آخر قراءة
-          if (latest != null) ...[
-            pw.SizedBox(height: 12),
-            pw.Text("📌 آخر قراءة:", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-            pw.Text(
-              "🔹 ${Helper.formatValueByType(latest.type, latest.value)} - ${Helper.formatDate(latest.timestamp)}",
-              style: pw.TextStyle(
-                fontSize: 14,
-                color: Helper.isOutOfRangeByType(latest.type, latest.value, Constants.alertThresholds)
-                    ? PdfColors.red
-                    : PdfColors.green,
-              ),
-            ),
-            pw.SizedBox(height: 12),
-          ],
-
-
-          // 📊 رسم بياني مصغّر (Placeholder لو لسه ما أضفنا الدالة)
-          pw.SizedBox(height: 16),
-          if (chartImage != null) ...[
-            pw.Text("📊 الرسم البياني:", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-            pw.Center(child: pw.Image(chartImage, height: 220)), // ممكن 200–250
-            pw.SizedBox(height: 16),
-          ],
-
-          // 📊 ملخص القراءات
-          pw.SizedBox(height: 16),
-          pw.Text("📊 الملخص:", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-          pw.Bullet(text: "إجمالي القراءات: ${data.length}"),
-          pw.Bullet(
-            text: "✅ داخل النطاق: ${data.where((d) => !Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)).length}",
-          ),
-          pw.Bullet(
-            text: "⚠️ خارج النطاق: ${data.where((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)).length}",
-          ),
-
-          pw.Divider(thickness: 1),
-
-
-          // 📋 قراءات الحرارة
-          pw.Text("🌡️ قراءات الحرارة:", style: const pw.TextStyle(fontSize: 16)),
-          if (data.length < 50) ...[
-            // 👇 العرض التفصيلي
-            for (int i = 0; i < data.length; i += 20) ...[
-              ...data.skip(i).take(20).map((d) {
-                final value = Helper.formatValueByType(d.type, d.value);
-                final isOut = Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds);
-                return pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      '🔹 $value${isOut ? " ⚠" : ""} - ${Helper.formatDate(d.timestamp)}',
-                      style: pw.TextStyle(color: isOut ? PdfColors.red : PdfColors.green),
-                    ),
-                    pw.Text(isOut ? "⚠️ خارج النطاق" : "✅ طبيعية",
-                        style: const pw.TextStyle(fontSize: 12)),
-                    pw.SizedBox(height: 4),
-                    pw.Divider(thickness: 0.5),
-                  ],
-                );
-              }),
-              if (i + 20 < data.length)
-                pw.Column(children: [
-                  pw.NewPage(),
-                  pw.Text("متابعة القراءات...",
-                      style: pw.TextStyle(fontSize: 14, fontStyle: pw.FontStyle.italic)),
-                ]),
-            ]
-          ] else ...[
-            // 👇 العرض الجدولي المختصر
-            pw.TableHelper.fromTextArray(
-              headers: ['التاريخ', 'القراءة', 'الحالة'],
-              data: data.map((d) {
-                final value = Helper.formatValueByType(d.type, d.value);
-                final isOut = Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds);
-                return [
-                  Helper.formatDate(d.timestamp),
-                  value,
-                  isOut ? "⚠️ خارج النطاق" : "✅ طبيعية",
-                ];
-              }).toList(),
-              headerStyle: pw.TextStyle(fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-              headerDecoration: const pw.BoxDecoration(color: PdfColors.blueGrey800),
-              cellStyle: const pw.TextStyle(fontSize: 10),
-              cellAlignment: pw.Alignment.centerLeft,
-              cellHeight: 20,
-            ),
-          ],
-
-
-
-          // ⚠ قسم التنبيهات
-          if (data.any((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds))) ...[
-            pw.SizedBox(height: 16),
-            pw.Text("عدد القراءات خارج النطاق: ${data.where((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)).length}"),
-            pw.Text("⚠ تنبيهات:", style: pw.TextStyle(fontSize: 16, fontWeight: pw.FontWeight.bold)),
-            ...data.where((d) =>
-                Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)).map((d) =>
-                pw.Text(
-                  "• ${Helper.formatValueByType(d.type, d.value)} (${Helper.formatDate(d.timestamp)}) "
-                      "(${d.value > Constants.alertThresholds[d.type]!['max']!
-                      ? 'أعلى من ${Constants.alertThresholds[d.type]!['max']}'
-                      : 'أقل من ${Constants.alertThresholds[d.type]!['min']}'} )",
-                  style: const pw.TextStyle(color: PdfColors.red),
-                )
-            ),
-          ],
-          if (!data.any((d) => Helper.isOutOfRangeByType(d.type, d.value, Constants.alertThresholds)))
-            pw.Text("✅ لا توجد قراءات خارج النطاق", style:const pw.TextStyle(color: PdfColors.green)),
-
-          pw.Divider(thickness: 1),
-
-
-         ]
-      ),
-    );
-
-    final dir = await getApplicationDocumentsDirectory();
-    final file = File('${dir.path}/temperature_report_$now.pdf');
-    await file.writeAsBytes(await pdf.save());
-    return file;
-  }
 }
