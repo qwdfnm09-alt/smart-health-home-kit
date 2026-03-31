@@ -1,4 +1,4 @@
-# 🏥 Smart Health Home Kit
+# 🏥 T-MED Kit
 
 A smart health monitoring system built with Flutter that connects to medical devices via Bluetooth (BLE) to track and analyze health data in real time.
 
