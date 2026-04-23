@@ -17,6 +17,7 @@ import 'screens/welcome_screen.dart';
 import 'screens/routine_screen.dart';
 import 'screens/ai_chat_screen.dart';
 import 'screens/privacy_policy_screen.dart';
+import 'screens/advice_screen.dart';
 import 'services/storage_service.dart';
 import 'models/user_profile.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -336,9 +337,13 @@ class _SmartHealthAppState extends State<SmartHealthApp> {
               case '/glucose':
                 return createSlideRoute(const GlucoseScreen());
               case '/bp':
+              case '/blood_pressure':
                 return createSlideRoute(const BloodPressureScreen());
               case '/temp':
+              case '/thermometer':
                 return createSlideRoute(const ThermometerScreen());
+              case '/advice':
+                return createSlideRoute(const AdviceScreen());
               case '/settings':
                 return createFadeRoute(SettingsScreen(
                   onLocaleChanged: _changeLocale,

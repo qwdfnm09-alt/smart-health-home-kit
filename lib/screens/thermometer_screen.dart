@@ -6,14 +6,12 @@ import '../devices/thermometer.dart';
 import '../models/health_data.dart';
 import '../services/ble_service.dart';
 import '../services/storage_service.dart';
-import '../services/alert_service.dart';
 import '../services/pdf_service.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/helper.dart';
 import '../utils/constants.dart';
 import 'dart:async';
 import '../utils/device_type.dart';
-import '../models/thermometer_reading.dart';
 import '../utils/logger.dart';
 
 
@@ -75,38 +73,21 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
     // ✅ استمع للداتا المتفككة من DataParser
     _parsedSub = _bleService.onParsedData.listen((parsed) async {
       if (parsed['device'] == 'thermometer') {
-        final t = ThermometerReading.fromMap(parsed);
-        final healthData = HealthData(
-          type: 'temperature',
-          value: t.temperature,
-          unit: t.unit,
-          timestamp: t.datetime,
-          source: t.source,
-        );
+        final healthData = parsed['healthData'];
+        if (healthData is! HealthData) return;
 
-        // 1️⃣ احفظ القياس
-        await _storage.addHealthData(healthData);
-        // 2️⃣ هات بيانات المستخدم (لازم await)
-        final userProfile = _storage.getUserProfile();
-        if (userProfile == null) return;
-        // 4️⃣ احفظ النصائح
-        await _storage.saveHealthDataWithAdvice(healthData);
-        // 5️⃣ Alerts
-          AlertService.checkForAlert(healthData);
-        // 6️⃣ UI update
-          setState(() {
-            _latestReading = healthData;
-            _allReadings.insert(0, healthData);
-            _isConnecting = false;
-          });
+        setState(() {
+          _latestReading = healthData;
+          _isConnecting = false;
+        });
 
-          _loadReadings(); // ✅ تحديث القائمة بعد كل قراءة جديدة
+        _loadReadings(); // ✅ التحديث يأتي من البيانات المحفوظة عبر BleService
 
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("تم حفظ قراءة الحرارة ")),
-            );
-          }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("تم حفظ قراءة الحرارة ")),
+          );
+        }
       }
     });
   }
@@ -158,6 +139,7 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
         .where((d) => d.type == DataTypes.temp)
         .toList();
     all.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    if (!mounted) return;
     setState(() {
       _allData.clear();
       _allData.addAll(all);   // ✅ عشان الفلترة تشتغل صح

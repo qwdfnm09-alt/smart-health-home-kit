@@ -6,14 +6,12 @@ import '../devices/glucose_meter.dart';
 import '../models/health_data.dart';
 import '../services/ble_service.dart';
 import '../services/storage_service.dart';
-import '../services/alert_service.dart';
 import '../services/pdf_service.dart';
 import '../l10n/app_localizations.dart'; // ✅ الترجمة
 import '../utils/helper.dart';
 import '../utils/constants.dart';
 import 'dart:async';
 import '../utils/device_type.dart';
-import '../models/glucose_reading.dart';
 import '../utils/logger.dart';
 
 
@@ -79,41 +77,21 @@ class _GlucoseScreenState extends State<GlucoseScreen> {
     // ✅ استمع للداتا المتفككة من DataParser
     _parsedSub = _bleService.onParsedData.listen((parsed) async {
       if (parsed['device'] == 'glucose') {
-        final g = GlucoseReading.fromMap(parsed);
+        final healthData = parsed['healthData'];
+        if (healthData is! HealthData) return;
 
+        setState(() {
+          _latestReading = healthData;
+          _isConnecting = false;
+        });
 
-        // هنا حوّل GlucoseReading -> HealthData (علشان التخزين والـ UI اللي مبني على HealthData)
-        final healthData = HealthData(
-          type: 'glucose',
-          value: g.glucose.toDouble(),
-          unit: g.unit,
-          timestamp: g.datetime,
-          source: g.source,
-        );
+        _loadReadings(); // ✅ التحديث يأتي من البيانات المحفوظة عبر BleService
 
-        // 1️⃣ احفظ القياس
-        await _storage.addHealthData(healthData);
-        // 2️⃣ هات بيانات المستخدم (لازم await)
-        final userProfile =_storage.getUserProfile();
-        if (userProfile == null) return;
-        // 4️⃣ احفظ النصائح
-        await _storage.saveHealthDataWithAdvice(healthData);
-        // 5️⃣ Alerts
-         AlertService.checkForAlert(healthData);
-         // 6️⃣ UI update
-          setState(() {
-            _latestReading = healthData;
-            _allReadings.insert(0, healthData);
-            _isConnecting = false;
-          });
-
-          _loadReadings(); // ✅ تحديث القائمة بعد كل قراءة جديدة
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("تم حفظ قراءة السكر")),
-            );
-          }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("تم حفظ قراءة السكر")),
+          );
+        }
       }
     });
   }
@@ -165,14 +143,14 @@ class _GlucoseScreenState extends State<GlucoseScreen> {
         .where((d) => d.type == DataTypes.glucose)
         .toList();
     all.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    if (!mounted) return;
     setState(() {
       _allData.clear();
       _allData.addAll(all); // ✅ عشان الفلترة تشتغل صح
     _allReadings = all; // ✅ عرض آخر 20 قراءة فقط
     if (_allReadings.isNotEmpty) _latestReading = _allReadings.first;
-   });
+    });
   }
-
 
   void _filterReadings() {
     final now = DateTime.now();

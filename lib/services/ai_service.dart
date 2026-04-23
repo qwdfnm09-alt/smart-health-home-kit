@@ -25,7 +25,7 @@ class AIService {
   AIService._internal();
 
   void init() {
-    if (AIConfig.geminiApiKey == 'YOUR_GEMINI_API_KEY_HERE' || AIConfig.geminiApiKey.isEmpty) {
+    if (!AIConfig.hasGeminiApiKey) {
       AppLogger.logError("⚠️ Gemini API Key is missing!");
     }
   }
@@ -35,6 +35,12 @@ class AIService {
     List<int>? imageBytes,
     List<Map<String, String>> chatHistory = const [],
   }) async {
+    if (!AIConfig.hasGeminiApiKey) {
+      return AIResponse(
+        text: "خدمة الذكاء الاصطناعي غير مفعلة حاليًا لأن مفتاح Gemini غير مضبوط.",
+      );
+    }
+
     final String apiKey = AIConfig.geminiApiKey;
     final String model = AIConfig.modelName;
     final String url = "https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$apiKey";

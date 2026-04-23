@@ -3,11 +3,9 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../devices/blood_pressure.dart';
-import '../models/blood_pressure_reading.dart' show BloodPressureReading;
 import '../models/health_data.dart';
 import '../services/ble_service.dart';
 import '../services/storage_service.dart';
-import '../services/alert_service.dart';
 import '../services/pdf_service.dart';
 import '../l10n/app_localizations.dart'; // ✅ استيراد الترجمة
 import '../utils/helper.dart';
@@ -59,10 +57,13 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
     // listen to hive box changes so screen updates when new data saved
     final box = StorageService().healthDataBox;
     _boxListener = () {
-      // when box changes, reload readings from storage
-      _loadReadings();
+      if (mounted) {
+        _loadReadings();
+      }
     };
-    box.listenable().addListener(_boxListener!);
+    if (_boxListener != null) {
+      box.listenable().addListener(_boxListener!);
+    }
 
 
     _loadReadings(); // ✅ تحديث القائمة بعد كل قراءة جديدة
@@ -78,43 +79,22 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
     // ✅ استمع للداتا المتفككة من DataParser
     _parsedSub = _bleService.onParsedData.listen((parsed) async {
       if (parsed['device'] == 'blood_pressure') {
-        final bp = BloodPressureReading.fromMap(parsed);
+        final healthData = parsed['healthData'];
+        if (healthData is! HealthData) return;
 
+        setState(() {
+          _latestReading = healthData;
+          _isConnecting = false;
+        });
 
-        // هنا حوّل GlucoseReading -> HealthData (علشان التخزين والـ UI اللي مبني على HealthData)
-        final healthData = HealthData(
-          type: "bp",
-          value: (bp.systolic * 1000 + bp.diastolic * 10 + bp.pulse).toDouble(),
-          timestamp: bp.datetime,
-          unit: "mmHg",
-          source: bp.source,
-        );
+        _loadReadings(); // ✅ التحديث يأتي من البيانات المحفوظة عبر BleService
 
-        // 1️⃣ احفظ القياس
-        await _storage.addHealthData(healthData);
-        // 2️⃣ هات بيانات المستخدم (لازم await)
-        final userProfile =_storage.getUserProfile();
-        if (userProfile == null) return;
-
-          // 4️⃣ احفظ النصائح
-        await _storage.saveHealthDataWithAdvice(healthData);
-          // 5️⃣ Alerts
-          AlertService.checkForAlert(healthData);
-          // 6️⃣ UI update
-          setState(() {
-            _latestReading = healthData;
-            _allReadings.insert(0, healthData);
-            _isConnecting = false;
-          });
-
-          _loadReadings(); // ✅ تحديث القائمة بعد كل قراءة جديدة
-
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("تم حفظ قراءة الضغط")),
-            );
-          }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("تم حفظ قراءة الضغط")),
+          );
         }
+      }
     });
   }
 
@@ -168,6 +148,7 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
         .where((d) => d.type == DataTypes.bp)
         .toList();
     all.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    if (!mounted) return;
     setState(() {
       _allReadings = all;
       _allData.clear();

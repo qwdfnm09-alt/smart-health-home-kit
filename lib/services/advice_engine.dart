@@ -9,7 +9,7 @@ class AdviceEngine {
   static List<HealthAdvice> getAdvice({
     required HealthData data,
     required UserProfile profile,
-    List<HealthData> history = const [], // أضفنا التاريخ للتحليل المستقبلي
+    List<HealthData> history = const [],
   }) {
     AppLogger.logInfo("🧠 AdviceEngine: Processing '${data.type}' for ${profile.name}");
     List<HealthAdvice> adviceList = [];
@@ -29,63 +29,54 @@ class AdviceEngine {
     return adviceList;
   }
 
-  // ---------------- 🩸 Glucose (Diabetes Intelligence) ----------------
+  // ---------------- 🩸 Glucose ----------------
   static List<HealthAdvice> _glucoseAdvice(HealthData data, UserProfile profile, List<HealthData> history) {
     List<HealthAdvice> list = [];
-    final value = data.value;
-    final isDiabetic = profile.conditions.any((c) => c.toLowerCase().contains("diabetes") || c.contains("سكري"));
+    // التأكد من جلب القيمة الصحيحة
+    final double glucoseValue = (data.glucose?.toDouble()) ?? data.value;
+    final range = Constants.alertThresholds[DataTypes.glucose]!;
 
-    // 🚨 حالة الطوارئ (Hyperglycemia Crisis)
-    if (value > 300) {
+    if (glucoseValue > 300) {
       list.add(_buildAdvice(
         id: 'gl_emergency_${data.timestamp.millisecondsSinceEpoch}',
-        title: '⚠️ تحذير: مستوى سكر حرج',
-        description: "مستوى السكر مرتفع جدًا بشكل خطر. اشرب الكثير من الماء فورًا، وتجنب أي نشاط بدني عنيف، واتصل بطبيبك أو توجه لأقرب طوارئ إذا شعرت بغثيان أو ضيق تنفس.",
+        title: '⚠️ تحذير: سكر حرج',
+        description: "مستوى السكر مرتفع جداً ($glucoseValue). اتصل بطبيبك فوراً.",
         category: AdviceCategory.warning,
         priority: AdvicePriority.high,
         risk: AdviceRisk.danger,
         measurementTime: data.timestamp,
         type: DataTypes.glucose,
       ));
-    } 
-    // 📉 حالة هبوط السكر (Hypoglycemia)
-    else if (value < 70) {
+    } else if (glucoseValue > range["max"]!) {
+      list.add(_buildAdvice(
+        id: 'gl_high_${data.timestamp.millisecondsSinceEpoch}',
+        title: '📈 سكر مرتفع',
+        description: "سكرك ($glucoseValue) أعلى من المعدل. قلل السكريات وامشِ قليلاً.",
+        category: AdviceCategory.warning,
+        priority: AdvicePriority.medium,
+        risk: AdviceRisk.caution,
+        measurementTime: data.timestamp,
+        type: DataTypes.glucose,
+      ));
+    } else if (glucoseValue < range["min"]!) {
       list.add(_buildAdvice(
         id: 'gl_low_${data.timestamp.millisecondsSinceEpoch}',
-        title: '📉 تنبيه: هبوط السكر',
-        description: _tone(profile,
-          strict: "تناول 15 جرامًا من السكريات السريعة (نصف كوب عصير) فورًا وأعد القياس بعد 15 دقيقة. لا تهمل هذا التنبيه.",
-          balanced: "سكرك منخفض. تناول قطعة حلوى أو عصير وانتظر قليلاً، ثم تناول وجبة خفيفة.",
-          relaxed: "سكرك واطي شوية، خد حاجة مسكرة بسرعة وريح جسمك.",
-        ),
-        category: AdviceCategory.food,
+        title: '📉 هبوط سكر',
+        description: "سكرك منخفض ($glucoseValue). تناول عصير أو عسل فوراً.",
+        category: AdviceCategory.warning,
         priority: AdvicePriority.high,
         risk: AdviceRisk.danger,
         measurementTime: data.timestamp,
         type: DataTypes.glucose,
       ));
-    }
-    // ✅ المستوى الطبيعي أو المرتفع قليلاً
-    else {
-      // إذا كان مريض سكر، نكون أكثر حذراً (140 كحد أقصى بدل 180)
-      double threshold = isDiabetic ? 140 : 180;
-      bool isHigh = value > threshold;
-
-      String desc = isHigh 
-          ? (isDiabetic ? "مستوى السكر مرتفع بالنسبة لمريض سكر. تأكد من جرعة الدواء والمشي قليلاً." : "مستوى السكر مرتفع قليلاً. حاول المشي وشرب الماء.")
-          : "مستوى السكر ممتاز ومستقر. استمر في اتباع نظامك الغذائي الحالي.";
-      
+    } else {
       list.add(_buildAdvice(
-        id: 'gl_normal_${data.timestamp.millisecondsSinceEpoch}',
-        title: isHigh ? 'ارتفاع يحتاج متابعة' : 'مستوى سكر مستقر',
-        description: _tone(profile,
-          strict: "التزم بالحمية الغذائية بدقة. $desc",
-          balanced: "نتائج جيدة بشكل عام. $desc",
-          relaxed: "كله تمام، خلي بالك بس من الأكل الجاي. $desc",
-        ),
-        category: isHigh ? AdviceCategory.activity : AdviceCategory.lifestyle,
-        priority: isHigh ? AdvicePriority.medium : AdvicePriority.low,
-        risk: isHigh ? AdviceRisk.caution : AdviceRisk.normal,
+        id: 'gl_ok_${data.timestamp.millisecondsSinceEpoch}',
+        title: 'مستوى سكر مستقر',
+        description: "سكرك ($glucoseValue) في النطاق الطبيعي. حافظ على نظامك.",
+        category: AdviceCategory.lifestyle,
+        priority: AdvicePriority.low,
+        risk: AdviceRisk.normal,
         measurementTime: data.timestamp,
         type: DataTypes.glucose,
       ));
@@ -93,27 +84,40 @@ class AdviceEngine {
     return list;
   }
 
-  // ---------------- 🌡️ Temperature Intelligence ----------------
+  // ---------------- 🌡️ Temperature ----------------
   static List<HealthAdvice> _tempAdvice(HealthData data, UserProfile profile) {
     List<HealthAdvice> list = [];
-    final temp = data.value;
+    // التعديل الجوهري: استخدام الحقل المخصص أولاً
+    final double tempValue = data.temperature ?? data.value;
+    final range = Constants.alertThresholds[DataTypes.temp]!;
 
-    if (temp >= 38.5) {
+    if (tempValue >= 38.5) {
       list.add(_buildAdvice(
-        id: 'temp_high_${data.timestamp.millisecondsSinceEpoch}',
+        id: 'temp_high_v_${data.timestamp.millisecondsSinceEpoch}',
         title: '🌡️ تنبيه: حمى مرتفعة',
-        description: "حرارتك مرتفعة. استخدم كمدات ماء فاتر (ليس باردًا)، واشرب الكثير من السوائل، وإذا لم تنخفض الحرارة خلال ساعات، استشر الطبيب.",
+        description: "حرارتك مرتفعة جداً ($tempValue). استخدم كمدات واستشر طبيب.",
         category: AdviceCategory.warning,
         priority: AdvicePriority.high,
         risk: AdviceRisk.danger,
         measurementTime: data.timestamp,
         type: DataTypes.temp,
       ));
-    } else if (temp <= 35.5) {
+    } else if (tempValue > range["max"]!) {
+      list.add(_buildAdvice(
+        id: 'temp_caution_${data.timestamp.millisecondsSinceEpoch}',
+        title: '🌡️ ارتفاع طفيف في الحرارة',
+        description: "حرارتك ($tempValue) أعلى من المعدل الطبيعي. اشرب سوائل وراقبها.",
+        category: AdviceCategory.warning,
+        priority: AdvicePriority.medium,
+        risk: AdviceRisk.caution,
+        measurementTime: data.timestamp,
+        type: DataTypes.temp,
+      ));
+    } else if (tempValue < range["min"]!) {
       list.add(_buildAdvice(
         id: 'temp_low_${data.timestamp.millisecondsSinceEpoch}',
         title: '❄️ تنبيه: انخفاض حرارة',
-        description: "درجة حرارة جسمك منخفضة. ارتدِ ملابس دافئة واشرب مشروبًا ساخنًا. لو استمر الانخفاض مع شعور بالرجفة، يرجى استشارة مختص.",
+        description: "حرارة جسمك منخفضة ($tempValue). تدفأ جيداً.",
         category: AdviceCategory.warning,
         priority: AdvicePriority.medium,
         risk: AdviceRisk.caution,
@@ -124,7 +128,7 @@ class AdviceEngine {
       list.add(_buildAdvice(
         id: 'temp_ok_${data.timestamp.millisecondsSinceEpoch}',
         title: 'حرارة طبيعية',
-        description: "حرارة جسمك مثالية (36.5 - 37.2). حافظ على روتينك اليومي.",
+        description: "حرارة جسمك ($tempValue) مثالية.",
         category: AdviceCategory.lifestyle,
         priority: AdvicePriority.low,
         risk: AdviceRisk.normal,
@@ -135,51 +139,53 @@ class AdviceEngine {
     return list;
   }
 
-  // ---------------- 💓 Blood Pressure Intelligence ----------------
+  // ---------------- 💓 Blood Pressure ----------------
   static List<HealthAdvice> _bpAdvice(HealthData data, UserProfile profile, List<HealthData> history) {
     List<HealthAdvice> list = [];
-    final sys = data.systolic ?? 0;
-    final dia = data.diastolic ?? 0;
+    final int sys = data.systolic ?? data.value.toInt();
+    final int dia = data.diastolic ?? 0;
+    
+    final bpRange = Constants.bpThresholds[DataTypes.bp]!["bp_systolic"]!;
+    final diaRange = Constants.bpThresholds[DataTypes.bp]!["bp_diastolic"]!;
 
-    // 🚨 أزمة ضغط (Hypertensive Crisis)
     if (sys >= 180 || dia >= 120) {
       list.add(_buildAdvice(
         id: 'bp_crisis_${data.timestamp.millisecondsSinceEpoch}',
         title: '🛑 حالة طارئة: ضغط حرج',
-        description: "ضغط الدم وصل لمستوى حرج جدًا. اجلس بهدوء، تنفس ببطء، ولا تحاول بذل أي مجهود. إذا شعرت بألم في الصدر أو صداع شديد، توجه للطوارئ فورًا.",
+        description: "ضغطك في مستوى خطر ($sys/$dia). اطلب مساعدة طبية فوراً.",
         category: AdviceCategory.warning,
         priority: AdvicePriority.high,
         risk: AdviceRisk.danger,
         measurementTime: data.timestamp,
         type: DataTypes.bp,
       ));
-    } 
-    // 📈 ضغط مرتفع (Hypertension)
-    else if (sys >= 140 || dia >= 90) {
-      String advice = "ضغطك مرتفع قليلاً. حاول تقليل الملح في الطعام، وتجنب التوتر والكافيين، وراقب القياس مرة أخرى بعد ساعة من الراحة.";
-      if (profile.age > 65) advice += " (بالنسبة لعمرك، هذا الارتفاع يحتاج لمتابعة دقيقة مع طبيبك).";
-
+    } else if (sys > bpRange["max"]! || dia > diaRange["max"]!) {
       list.add(_buildAdvice(
         id: 'bp_high_${data.timestamp.millisecondsSinceEpoch}',
         title: '📈 ضغط مرتفع',
-        description: _tone(profile,
-          strict: "يجب الالتزام بتقليل الصوديوم فورًا والمتابعة. $advice",
-          balanced: "حاول الاسترخاء وتقليل الأملاح. $advice",
-          relaxed: "خفف الملح شوية في أكلك النهاردة وارتاح. $advice",
-        ),
+        description: "ضغطك مرتفع ($sys/$dia). قلل الأملاح وارتح قليلاً.",
         category: AdviceCategory.warning,
         priority: AdvicePriority.medium,
         risk: AdviceRisk.caution,
         measurementTime: data.timestamp,
         type: DataTypes.bp,
       ));
-    }
-    // ✅ ضغط طبيعي
-    else {
+    } else if ((sys < bpRange["min"]! && sys > 0) || (dia < diaRange["min"]! && dia > 0)) {
+      list.add(_buildAdvice(
+        id: 'bp_low_${data.timestamp.millisecondsSinceEpoch}',
+        title: '📉 ضغط منخفض',
+        description: "ضغطك منخفض ($sys/$dia). اشرب سوائل كافية.",
+        category: AdviceCategory.warning,
+        priority: AdvicePriority.medium,
+        risk: AdviceRisk.caution,
+        measurementTime: data.timestamp,
+        type: DataTypes.bp,
+      ));
+    } else {
       list.add(_buildAdvice(
         id: 'bp_ok_${data.timestamp.millisecondsSinceEpoch}',
         title: 'ضغط دم مثالي',
-        description: "ضغطك في النطاق الصحي (120/80). استمر في ممارسة الرياضة الخفيفة والحفاظ على وزن صحي.",
+        description: "ضغطك ($sys/$dia) في النطاق الصحي.",
         category: AdviceCategory.lifestyle,
         priority: AdvicePriority.low,
         risk: AdviceRisk.normal,
@@ -188,16 +194,6 @@ class AdviceEngine {
       ));
     }
     return list;
-  }
-
-  // ---------------- 🛠️ Helper Methods ----------------
-
-  static String _tone(UserProfile profile, {required String strict, required String balanced, required String relaxed}) {
-    switch (profile.personality) {
-      case PersonalityType.strict: return strict;
-      case PersonalityType.relaxed: return relaxed;
-      case PersonalityType.balanced: return balanced;
-    }
   }
 
   static HealthAdvice _buildAdvice({

@@ -410,6 +410,14 @@ class StorageService {
     await _healthDataBox?.close();
     await _userProfileBox?.close();
     await _alertBox?.close();
+    await _routineBox?.close();
+
+    if (Hive.isBoxOpen('adviceBox')) {
+      await Hive.box<HealthAdvice>('adviceBox').close();
+    }
+    if (Hive.isBoxOpen('remindLaterBox')) {
+      await Hive.box('remindLaterBox').close();
+    }
   }
 
 }

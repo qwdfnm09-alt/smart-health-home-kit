@@ -17,6 +17,18 @@ import 'package:permission_handler/permission_handler.dart';
 
 
 class BleService {
+  String _streamDeviceName(DeviceType type) {
+    switch (type) {
+      case DeviceType.bloodPressure:
+        return 'blood_pressure';
+      case DeviceType.glucose:
+        return 'glucose';
+      case DeviceType.thermometer:
+        return 'thermometer';
+      case DeviceType.unknown:
+        return 'unknown';
+    }
+  }
 
   DeviceType _detectDeviceType(String deviceName) {
     return DeviceConstants.deviceNameToType[deviceName] ?? DeviceType.unknown;
@@ -137,6 +149,24 @@ class BleService {
 
       // 3️⃣ تخزين في Hive
       if (healthData != null) {
+        if (!_onParsedDataController.isClosed) {
+          _onParsedDataController.add({
+            'device': _streamDeviceName(type),
+            'source': healthData.source,
+            'healthData': healthData,
+            'value': healthData.value,
+            'unit': healthData.unit,
+            'timestamp': healthData.timestamp.toIso8601String(),
+            'datetime': healthData.timestamp.toIso8601String(),
+            if (healthData.systolic != null) 'systolic': healthData.systolic,
+            if (healthData.diastolic != null) 'diastolic': healthData.diastolic,
+            if (healthData.pulse != null) 'pulse': healthData.pulse,
+            if (healthData.glucose != null) 'glucose': healthData.glucose,
+            if (healthData.temperature != null) 'temperature': healthData.temperature,
+            'raw': data,
+          });
+        }
+
         await StorageService().saveHealthDataWithAdvice(healthData);
         AppLogger.logInfo("💾 Saved health data → ${healthData.type}");
         AppLogger.logInfo("👉 Stored HealthData fields -> sys:${healthData.systolic}, dia:${healthData.diastolic}, pulse:${healthData.pulse}, extra:${healthData.extra}");
@@ -189,6 +219,13 @@ class BleService {
   // 🛰 Simple scan for testing (prints all nearby devices)
   void debugScan({Duration timeout = const Duration(seconds: 10)}) async {
     try {
+      // ✅ Check if Bluetooth is ON
+      final adapterState = await FlutterBluePlus.adapterState.first;
+      if (adapterState != BluetoothAdapterState.on) {
+        AppLogger.logInfo("❌ Cannot start debug scan: Bluetooth is OFF");
+        return;
+      }
+
       AppLogger.logInfo("🔍 Starting BLE Debug Scan...");
       await FlutterBluePlus.startScan(timeout: timeout);
 
@@ -287,6 +324,14 @@ class BleService {
   Stream<List<ScanResult>> scanForDevices({
     Duration timeout = const Duration(seconds: 5),
   }) async* {
+    // Check if Bluetooth is ON
+    final adapterState = await FlutterBluePlus.adapterState.first;
+    if (adapterState != BluetoothAdapterState.on) {
+      _notifyError("يرجى تفعيل البلوتوث أولاً");
+      yield [];
+      return;
+    }
+
     // 1. أوقف أي بحث قديم ونظف النتائج السابقة
     await FlutterBluePlus.stopScan();
 
@@ -296,7 +341,7 @@ class BleService {
     yield* FlutterBluePlus.scanResults.map((results) {
       // 3. احصل على الأجهزة المتصلة حالياً بالهاتف لضمان ظهورها
       final connectedDevices = FlutterBluePlus.connectedDevices;
-      
+
       // تحويل الأجهزة المتصلة إلى ScanResult وهمية لتظهر في القائمة
       final List<ScanResult> allResults = [...results];
       for (var d in connectedDevices) {
@@ -305,19 +350,19 @@ class BleService {
           bool exists = allResults.any((r) => r.device.remoteId == d.remoteId);
           if (!exists) {
             allResults.add(ScanResult(
-                device: d,
-                advertisementData: AdvertisementData(
-                  advName: d.platformName,
-                  txPowerLevel: null,
-                  connectable: true,
-                  appearance: null,
-                  manufacturerData: {},
-                  serviceData: {},
-                  serviceUuids: [],
-                ),
-                rssi: -50,
-                timeStamp: DateTime.now(),
-              ));
+              device: d,
+              advertisementData: AdvertisementData(
+                advName: d.platformName,
+                txPowerLevel: null,
+                connectable: true,
+                appearance: null,
+                manufacturerData: {},
+                serviceData: {},
+                serviceUuids: [],
+              ),
+              rssi: -50,
+              timeStamp: DateTime.now(),
+            ));
           }
         }
       }
@@ -569,18 +614,18 @@ class BleService {
         AppLogger.logInfo("🔌 Disconnecting from current device: ${_connectedDevice!.platformName}");
         await _connectedDevice!.disconnect();
       }
-      
+
       // إلغاء جميع الاشتراكات لهذا الجهاز
       for (var sub in _subscriptions) {
         await sub.cancel();
       }
       _subscriptions.clear();
-      
+
       // تصفير المتغيرات
       _connectedDevice = null;
       _notifyCharacteristic = null;
       _writeCharacteristic = null;
-      
+
       _updateConnectionState(false);
       AppLogger.logInfo("✅ Disconnected and cleaned up successfully");
 
@@ -652,6 +697,14 @@ class BleService {
 
   Future<void> startScan() async {
     AppLogger.logInfo('🟦 BLE: startScan() called');
+
+    // ✅ Check if Bluetooth is ON
+    final adapterState = await FlutterBluePlus.adapterState.first;
+    if (adapterState != BluetoothAdapterState.on) {
+      AppLogger.logInfo("❌ Cannot start scan: Bluetooth is OFF");
+      _notifyError("يرجى تفعيل البلوتوث أولاً");
+      return;
+    }
 
     // تأكد من الصلاحيات
     await _ensureBlePermissions();
