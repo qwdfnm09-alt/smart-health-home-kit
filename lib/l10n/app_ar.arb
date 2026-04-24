@@ -9,6 +9,7 @@
   "stopScan": "إيقاف البحث",
   "viewAlerts": "عرض التنبيهات",
   "generateReport": "توليد التقرير",
+  "collectiveReport": "تقرير مجمع",
   "profile": "الملف الشخصي",
   "profilePage": "صفحة الملف الشخصي",
   "settings": "الإعدادات",
@@ -79,5 +80,14 @@
   "styleofadvice": "أسلوب النصائح",
   "bloodpressure": "ضغط الدم",
   "temperature": "الحرارة",
-  "glucose": "سكر الدم"
+  "glucose": "سكر الدم",
+  "manualEntry": "إدخال يدوي",
+  "systolic": "الضغط الانقباضي (SYS)",
+  "diastolic": "الضغط الانبساطي (DIA)",
+  "pulse": "النبض",
+  "glucoseValue": "قيمة السكر (mg/dL)",
+  "temperatureValue": "درجة الحرارة (°C)",
+  "addReading": "إضافة قراءة",
+  "readingAdded": "تمت إضافة القراءة بنجاح",
+  "invalidInput": "يرجى إدخال قيم صحيحة"
 }

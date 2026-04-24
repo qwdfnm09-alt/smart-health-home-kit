@@ -152,6 +152,12 @@ abstract class AppLocalizations {
   /// **'Generate Report'**
   String get generateReport;
 
+  /// No description provided for @collectiveReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Collective Report'**
+  String get collectiveReport;
+
   /// No description provided for @profile.
   ///
   /// In en, this message translates to:
@@ -559,6 +565,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Glucose'**
   String get glucose;
+
+  /// No description provided for @manualEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual Entry'**
+  String get manualEntry;
+
+  /// No description provided for @systolic.
+  ///
+  /// In en, this message translates to:
+  /// **'Systolic (SYS)'**
+  String get systolic;
+
+  /// No description provided for @diastolic.
+  ///
+  /// In en, this message translates to:
+  /// **'Diastolic (DIA)'**
+  String get diastolic;
+
+  /// No description provided for @pulse.
+  ///
+  /// In en, this message translates to:
+  /// **'Pulse'**
+  String get pulse;
+
+  /// No description provided for @glucoseValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Glucose Value (mg/dL)'**
+  String get glucoseValue;
+
+  /// No description provided for @temperatureValue.
+  ///
+  /// In en, this message translates to:
+  /// **'Temperature Value (°C)'**
+  String get temperatureValue;
+
+  /// No description provided for @addReading.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Reading'**
+  String get addReading;
+
+  /// No description provided for @readingAdded.
+  ///
+  /// In en, this message translates to:
+  /// **'Reading added successfully'**
+  String get readingAdded;
+
+  /// No description provided for @invalidInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter valid values'**
+  String get invalidInput;
 }
 
 class _AppLocalizationsDelegate

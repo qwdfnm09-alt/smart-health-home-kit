@@ -11,6 +11,7 @@ import 'screens/alerts_screen.dart';
 import 'screens/glucose_screen.dart';
 import 'screens/blood_pressure_screen.dart';
 import 'screens/thermometer_screen.dart';
+import 'screens/manual_entry_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/welcome_screen.dart';
@@ -342,6 +343,10 @@ class _SmartHealthAppState extends State<SmartHealthApp> {
               case '/temp':
               case '/thermometer':
                 return createSlideRoute(const ThermometerScreen());
+              case '/manual-entry':
+                final initialType =
+                    settings.arguments is String ? settings.arguments as String : null;
+                return createSlideRoute(ManualEntryScreen(initialType: initialType));
               case '/advice':
                 return createSlideRoute(const AdviceScreen());
               case '/settings':

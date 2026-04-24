@@ -49,6 +49,8 @@ class _SetupScreenState extends State<SetupScreen>
     await StorageService().setSetupCompleted(true);
   }
 
+  bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
+
   Future<void> _checkAll() async {
     final bluetooth = await Permission.bluetoothScan.isGranted &&
         await Permission.bluetoothConnect.isGranted;
@@ -77,33 +79,7 @@ class _SetupScreenState extends State<SetupScreen>
     if (_bluetoothGranted && _locationGranted && _batteryUnrestricted) {
       await _markSetupCompleted();
       if (!mounted) return;
-
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 1400), // 👈 زوّد أو قلّل
-          pageBuilder: (context, animation, secondaryAnimation) =>
-          const EditProfileScreen(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            final fade = CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            );
-
-            final slide = Tween<Offset>(
-              begin: const Offset(0, 0.08),
-              end: Offset.zero,
-            ).animate(fade);
-
-            return FadeTransition(
-              opacity: fade,
-              child: SlideTransition(
-                position: slide,
-                child: child,
-              ),
-            );
-          },
-        ),
-      );
+      _goToProfile();
 
     } else {
       if (!mounted) return;
@@ -115,6 +91,43 @@ class _SetupScreenState extends State<SetupScreen>
     }
 
     setState(() => _loading = false);
+  }
+
+  Future<void> _continueWithoutDevices() async {
+    setState(() => _loading = true);
+    await _markSetupCompleted();
+    if (!mounted) return;
+    setState(() => _loading = false);
+    _goToProfile();
+  }
+
+  void _goToProfile() {
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        transitionDuration: const Duration(milliseconds: 1400),
+        pageBuilder: (context, animation, secondaryAnimation) =>
+            const EditProfileScreen(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final fade = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
+
+          final slide = Tween<Offset>(
+            begin: const Offset(0, 0.08),
+            end: Offset.zero,
+          ).animate(fade);
+
+          return FadeTransition(
+            opacity: fade,
+            child: SlideTransition(
+              position: slide,
+              child: child,
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _openBatterySettings() async {
@@ -214,16 +227,47 @@ class _SetupScreenState extends State<SetupScreen>
             ),
 
             const SizedBox(height: 30),
+            Text(
+              _isArabic
+                  ? "يمكنك المتابعة الآن بدون الأجهزة، وتفعيل الصلاحيات لاحقاً عند استخدام البلوتوث."
+                  : "You can continue without devices now and enable permissions later when you use Bluetooth.",
+              style: TextStyle(color: Colors.grey.shade700),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
 
             _loading
                 ? const CircularProgressIndicator()
-                : ElevatedButton(
-              onPressed: _setupApp,
-              style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 40, vertical: 14)),
-              child: const Text("بدء استخدام التطبيق"),
-            ),
+                : Column(
+                    children: [
+                      ElevatedButton(
+                        onPressed: _setupApp,
+                        style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 40, vertical: 14)),
+                        child: Text(
+                          _isArabic
+                              ? "تفعيل صلاحيات الأجهزة"
+                              : "Enable Device Permissions",
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: _continueWithoutDevices,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 40,
+                            vertical: 14,
+                          ),
+                        ),
+                        child: Text(
+                          _isArabic
+                              ? "استخدام التطبيق بدون أجهزة"
+                              : "Use the App Without Devices",
+                        ),
+                      ),
+                    ],
+                  ),
           ],
         ),
       ),

@@ -487,6 +487,14 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
       appBar: AppBar(
         title: Text(t.bloodPressureDevice),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_note),
+            onPressed: () => Navigator.pushNamed(
+              context,
+              '/manual-entry',
+              arguments: DataTypes.bp,
+            ),
+          ),
       IconButton(
         icon: Icon(
           _bleService.isConnected ? Icons.bluetooth_connected : Icons.bluetooth,

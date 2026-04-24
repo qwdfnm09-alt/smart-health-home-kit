@@ -21,7 +21,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
   final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
   final ScrollController _scrollController = ScrollController();
-  
+
   final ImagePicker _picker = ImagePicker();
   XFile? _selectedImage;
   Uint8List? _imageBytes;
@@ -80,23 +80,23 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
   Future<void> _handleSendMessage() async {
     final text = _controller.text.trim();
-    if (text.isEmpty && _imageBytes == null) return;
+    final imageBytes = _imageBytes;
+    if (text.isEmpty && imageBytes == null) return;
 
     setState(() {
       _messages.add({
-        'role': 'user', 
+        'role': 'user',
         'text': text.isEmpty ? "أرسل صورة للتحليل" : text,
-        'image': _imageBytes != null ? MemoryImage(_imageBytes!) : null,
+        'image': imageBytes != null ? MemoryImage(imageBytes) : null,
       });
       _isLoading = true;
     });
-    
+
     final currentText = text;
-    final currentImage = _imageBytes;
+    final currentImage = imageBytes;
     _controller.clear();
     setState(() { _selectedImage = null; _imageBytes = null; });
     _scrollToBottom();
-
     try {
       final history = _messages
           .where((m) => m['text'] != null)
@@ -104,10 +104,10 @@ class _AIChatScreenState extends State<AIChatScreen> {
           .toList();
 
       final response = await AIService().sendMessage(currentText, imageBytes: currentImage, chatHistory: history);
-      
+
       setState(() {
         _messages.add({
-          'role': 'ai', 
+          'role': 'ai',
           'text': response.text,
           'addedAdvice': response.addedAdvice,
           'addedTask': response.addedTask,
@@ -170,14 +170,14 @@ class _AIChatScreenState extends State<AIChatScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       if (msg['image'] != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: ClipRRect(borderRadius: BorderRadius.circular(8), child: Image(image: msg['image'], height: 200, width: double.infinity, fit: BoxFit.cover))),
-                      if (isUser) Text(msg['text']!, style: const TextStyle(color: Colors.white, fontSize: 16))
-                      else MarkdownBody(data: msg['text']!, styleSheet: MarkdownStyleSheet(p: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 16))),
+                      if (isUser) Text(msg['text'] ?? '', style: const TextStyle(color: Colors.white, fontSize: 16))
+                      else MarkdownBody(data: msg['text'] ?? '', styleSheet: MarkdownStyleSheet(p: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 16))),
                     ],
                   ),
                 ),
                 if (!isUser) ...[
                   if (msg['addedAdvice'] == true || msg['addedTask'] == true) _buildSuccessChips(msg),
-                  _buildActionButtons(msg['text']!),
+                  _buildActionButtons(msg['text'] ?? ''),
                 ],
               ],
             ),
@@ -222,6 +222,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
   }
 
   Widget _buildImagePreview() {
+    if (_selectedImage == null) return const SizedBox.shrink();
     return Container(padding: const EdgeInsets.all(12), decoration: const BoxDecoration(color: Colors.black12, borderRadius: BorderRadius.vertical(top: Radius.circular(12))), child: Row(children: [ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.file(File(_selectedImage!.path), height: 60, width: 60, fit: BoxFit.cover)), const SizedBox(width: 12), const Expanded(child: Text("الصورة جاهزة للتحليل...", style: TextStyle(fontWeight: FontWeight.bold))), IconButton(icon: const Icon(Icons.cancel, color: Colors.red), onPressed: () => setState(() { _selectedImage = null; _imageBytes = null; }))]));
   }
 

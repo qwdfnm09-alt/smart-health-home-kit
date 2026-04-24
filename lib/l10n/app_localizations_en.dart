@@ -36,6 +36,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get generateReport => 'Generate Report';
 
   @override
+  String get collectiveReport => 'Collective Report';
+
+  @override
   String get profile => 'Profile';
 
   @override
@@ -242,4 +245,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get glucose => 'Glucose';
+
+  @override
+  String get manualEntry => 'Manual Entry';
+
+  @override
+  String get systolic => 'Systolic (SYS)';
+
+  @override
+  String get diastolic => 'Diastolic (DIA)';
+
+  @override
+  String get pulse => 'Pulse';
+
+  @override
+  String get glucoseValue => 'Glucose Value (mg/dL)';
+
+  @override
+  String get temperatureValue => 'Temperature Value (°C)';
+
+  @override
+  String get addReading => 'Add Reading';
+
+  @override
+  String get readingAdded => 'Reading added successfully';
+
+  @override
+  String get invalidInput => 'Please enter valid values';
 }

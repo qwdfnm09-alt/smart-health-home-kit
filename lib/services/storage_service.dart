@@ -170,21 +170,21 @@ class StorageService {
         case DataTypes.bp:
           if (_bpDataBox?.isOpen ?? false) {
             await _bpDataBox?.add(data.copyWith());
-            await _bpDataBox?.put('latest', data.copyWith() );
+            await _putLatestIfNewer(_bpDataBox, data);
             AppLogger.logInfo("💾 Saved BP data: ${data.toString()}");
           }
           break;
         case DataTypes.glucose:
           if (_glucoseDataBox?.isOpen ?? false) {
             await _glucoseDataBox?.add(data.copyWith());
-            await _glucoseDataBox?.put('latest', data.copyWith() ); // لو glucose
+            await _putLatestIfNewer(_glucoseDataBox, data); // لو glucose
             AppLogger.logInfo("💾 Saved Glucose data: ${data .toString()}");
           }
           break;
         case DataTypes.temp:
           if (_tempDataBox?.isOpen ?? false) {
             await _tempDataBox?.add(data.copyWith());
-            await _tempDataBox?.put('latest', data.copyWith()); // لو temp
+            await _putLatestIfNewer(_tempDataBox, data); // لو temp
             AppLogger.logInfo("💾 Saved Temp data: ${data.toString()}");
           }
           break;
@@ -417,6 +417,15 @@ class StorageService {
     }
     if (Hive.isBoxOpen('remindLaterBox')) {
       await Hive.box('remindLaterBox').close();
+    }
+  }
+
+  Future<void> _putLatestIfNewer(Box<HealthData>? box, HealthData data) async {
+    if (box == null || !box.isOpen) return;
+
+    final currentLatest = box.get('latest');
+    if (currentLatest == null || !currentLatest.timestamp.isAfter(data.timestamp)) {
+      await box.put('latest', data.copyWith());
     }
   }
 

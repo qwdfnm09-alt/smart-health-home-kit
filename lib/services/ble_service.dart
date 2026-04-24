@@ -332,6 +332,8 @@ class BleService {
       return;
     }
 
+    await _ensureBlePermissions();
+
     // 1. أوقف أي بحث قديم ونظف النتائج السابقة
     await FlutterBluePlus.stopScan();
 

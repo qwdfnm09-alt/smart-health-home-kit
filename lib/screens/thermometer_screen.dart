@@ -467,6 +467,14 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
         title: Text(t.thermometerDevice),
         actions: [
           IconButton(
+            icon: const Icon(Icons.edit_note),
+            onPressed: () => Navigator.pushNamed(
+              context,
+              '/manual-entry',
+              arguments: DataTypes.temp,
+            ),
+          ),
+          IconButton(
             icon: Icon(
               _bleService.isConnected ? Icons.bluetooth_connected : Icons.bluetooth,
               color: _bleService.isConnected ? Colors.green : null,

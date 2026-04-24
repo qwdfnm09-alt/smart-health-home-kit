@@ -115,15 +115,15 @@ class _ReportScreenState extends State<ReportScreen> {
   }
 
 
-  Future<void> _generateReport() async {
+  Future<void> _generateReport({List<HealthData>? customData}) async {
     final profile = StorageService().getUserProfile();
-    final healthData = _filteredHealthData;
+    final healthData = customData ?? _filteredHealthData;
 
-    final t = AppLocalizations.of(context)!; // ✅ النصوص المترجمة
+    final t = AppLocalizations.of(context)!;
 
     if (profile == null || healthData.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t.noDataToGenerateReport)), // ✅
+        SnackBar(content: Text(t.noDataToGenerateReport)),
       );
       return;
     }
@@ -139,18 +139,15 @@ class _ReportScreenState extends State<ReportScreen> {
       setState(() => _isGenerating = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t.reportGeneratedSuccessfully)), // ✅
+        SnackBar(content: Text(t.reportGeneratedSuccessfully)),
       );
-
-
-
 
       await OpenFile.open(file.path);
     } catch (e) {
       setState(() => _isGenerating = false);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${t.errorGeneratingReport}: $e')), // ✅
+        SnackBar(content: Text('${t.errorGeneratingReport}: $e')),
       );
     }
   }
@@ -169,7 +166,7 @@ class _ReportScreenState extends State<ReportScreen> {
   Widget build(BuildContext context) {
     final t = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text(t.healthReportTitle)), // ✅
+      appBar: AppBar(title: Text(t.healthReportTitle)),
       body: Column(
         children: [
           const SizedBox(height: 12),
@@ -241,11 +238,32 @@ class _ReportScreenState extends State<ReportScreen> {
               padding: const EdgeInsets.all(16.0),
               child: _isGenerating
                ? const CircularProgressIndicator()
-                : ElevatedButton.icon(
-                  onPressed: _generateReport,
-                  icon: const Icon(Icons.picture_as_pdf),
-                  label: Text(t.generateReport),
-                ),
+                : Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () => _generateReport(),
+                          icon: const Icon(Icons.picture_as_pdf),
+                          label: Text(t.generateReport, textAlign: TextAlign.center),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => _generateReport(customData: _allHealthData),
+                          icon: const Icon(Icons.summarize),
+                          label: Text(t.collectiveReport, textAlign: TextAlign.center),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            side: BorderSide(color: Theme.of(context).primaryColor),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
             ),
           ),
         ],

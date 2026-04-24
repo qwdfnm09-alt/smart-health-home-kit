@@ -9,6 +9,7 @@
   "stopScan": "Stop scanning",
   "viewAlerts": "View Alerts",
   "generateReport": "Generate Report",
+  "collectiveReport": "Collective Report",
   "profile": "Profile",
   "profilePage": "Profile Page",
   "settings": "Settings",
@@ -79,6 +80,14 @@
   "styleofadvice": "Style Of Advice",
   "bloodpressure": "Blood Pressure",
   "temperature": "Temperature",
-  "glucose": "Glucose"
-
+  "glucose": "Glucose",
+  "manualEntry": "Manual Entry",
+  "systolic": "Systolic (SYS)",
+  "diastolic": "Diastolic (DIA)",
+  "pulse": "Pulse",
+  "glucoseValue": "Glucose Value (mg/dL)",
+  "temperatureValue": "Temperature Value (°C)",
+  "addReading": "Add Reading",
+  "readingAdded": "Reading added successfully",
+  "invalidInput": "Please enter valid values"
 }

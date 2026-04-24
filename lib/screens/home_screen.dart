@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../services/ble_service.dart';
 import '../l10n/app_localizations.dart';
 import '../utils/animated_routes.dart';
@@ -12,7 +13,6 @@ import '../utils/helper.dart';
 import '../utils/constants.dart';
 import '../models/health_data.dart';
 import 'charts_screen.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'advice_screen.dart';
 
 
@@ -34,22 +34,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   final BleService _bleService = BleService();
   List<ScanResult> _scanResults = [];
   bool _isScanning = false;
+  bool _isOpeningDeviceScreen = false;
+  String? _pendingDeviceId;
 
   late AnimationController _controller;
-
-  Future<void> _checkPermissions() async {
-    await [
-      Permission.bluetooth,
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-      Permission.location,
-    ].request();
-  }
 
   @override
   void initState() {
     super.initState();
-    _checkPermissions();
 
     // ✅ Listen to BLE Errors (like Bluetooth is OFF)
     _bleService.errors.listen((message) {
@@ -109,21 +101,52 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     });
   }
 
-  void _connectToDevice(BluetoothDevice device) async {
+  void _shareReading(HealthData data, AppLocalizations t) {
+    final displayText = Helper.formatDisplayText(data);
+    final date = Helper.formatDate(data.timestamp);
+    final isArabic = Localizations.localeOf(context).languageCode == 'ar';
+    
+    final typeText = data.type == DataTypes.bp
+        ? t.bloodpressure
+        : data.type == DataTypes.glucose
+            ? t.glucose
+            : t.temperature;
+
+    final message = isArabic
+        ? "قراءة صحية من تطبيق T-MED:\nالمقياس: $typeText\nالقيمة: $displayText\nالتاريخ: $date"
+        : "Health Reading from T-MED app:\nType: $typeText\nValue: $displayText\nDate: $date";
+        
+    Share.share(message);
+  }
+
+  Future<void> _connectToDevice(BluetoothDevice device) async {
+    if (_isOpeningDeviceScreen) return;
+
+    setState(() {
+      _isOpeningDeviceScreen = true;
+      _pendingDeviceId = device.remoteId.str;
+    });
+
     try {
       String serviceUuid = "";
       String notifyCharUuid = "";
+      String? route;
 
       if (device.platformName.contains("Samico")) {
         serviceUuid = "fff0";
         notifyCharUuid = "fff4";
+        route = '/glucose';
       } else if (device.platformName.contains("BPM")) {
         serviceUuid = "fff0";
         notifyCharUuid = "fff4";
+        route = '/bp';
       } else if (device.platformName.contains("TEMP")) {
         serviceUuid = "1809";
         notifyCharUuid = "2a1c";
+        route = '/temp';
       }
+
+      if (route == null) return;
 
       await _bleService.connectToDevice(
         device,
@@ -131,29 +154,24 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         notifyCharUuid: notifyCharUuid,
       );
 
-      if (mounted) {
-        String route;
-        if (device.platformName.contains("BPM")) {
-          route = '/bp';
-        } else if (device.platformName.contains("Samico")) {
-          route = '/glucose';
-        } else if (device.platformName.contains("TEMP")) {
-          route = '/temp';
-        } else {
-          route = '/';
-        }
-
-        Navigator.pushNamed(
-          context,
-          route,
-          arguments: device.platformName,
-        );
-      }
+      if (!mounted) return;
+      await Navigator.pushNamed(
+        context,
+        route,
+        arguments: device.platformName,
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('فشل الاتصال بالجهاز: $e')),
       );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isOpeningDeviceScreen = false;
+          _pendingDeviceId = null;
+        });
+      }
     }
   }
 
@@ -184,6 +202,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       return isArabic ? "أهلاً يا $userName، $timeGreeting" : "Hello $userName, $timeGreeting";
     }
     return timeGreeting;
+  }
+
+  String _manualEntryLabel(bool isArabic) {
+    return isArabic ? "إدخال يدوي" : "Manual Entry";
   }
 
   Widget _buildSectionTitle(String title, {VoidCallback? onSeeAll, String? seeAllText}) {
@@ -283,9 +305,20 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                       size: 22,
                     ),
                   ),
-                  Text(
-                    isOut ? "⚠" : "✅",
-                    style: const TextStyle(fontSize: 18),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.share, color: Colors.white, size: 20),
+                        onPressed: () => _shareReading(data, t),
+                        constraints: const BoxConstraints(),
+                        padding: EdgeInsets.zero,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        isOut ? "⚠" : "✅",
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -594,6 +627,17 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                           ),
                         ),
                       ],
+                      _buildSectionTitle(_manualEntryLabel(isArabic)),
+                      _buildSmartDeviceCard(
+                        icon: Icons.edit_note,
+                        title: _manualEntryLabel(isArabic),
+                        colors: [Colors.blueGrey.shade800, Colors.teal.shade600],
+                        t: t,
+                        onTap: () async {
+                          final updated = await Navigator.pushNamed(context, '/manual-entry');
+                          if (updated == true) setState(() {});
+                        },
+                      ),
                       _buildSectionTitle(t.smartDevices),
                       _buildSmartDeviceCard(
                         icon: Icons.bloodtype,
@@ -726,8 +770,14 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                                           ),
                                           title: Text(device.platformName, style: const TextStyle(fontWeight: FontWeight.bold)),
                                           subtitle: Text(device.remoteId.str, style: const TextStyle(fontSize: 10)),
-                                          trailing: const Icon(Icons.link, size: 18),
-                                          onTap: () => _connectToDevice(device),
+                                          trailing: _pendingDeviceId == device.remoteId.str
+                                              ? const SizedBox(
+                                                  width: 18,
+                                                  height: 18,
+                                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                                )
+                                              : const Icon(Icons.link, size: 18),
+                                          onTap: _isOpeningDeviceScreen ? null : () => _connectToDevice(device),
                                         );
                                       },
                                     );

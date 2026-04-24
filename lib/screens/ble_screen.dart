@@ -78,20 +78,20 @@ class _BleScreenState extends State<BleScreen> {
     } else if (name.startsWith('TEMP')) {
       route = '/thermometer';
     }
-if (route != null) {
-  await _bleService.stopScan();
-  if (!mounted) return;
+    if (route != null) {
+      await _bleService.stopScan();
+      if (!mounted) return;
 
-  // ننتظر العودة من الشاشة التالية لإعادة تشغيل المسح
-  await Navigator.pushNamed(context, route, arguments: device);
+      // ننتظر العودة من الشاشة التالية لإعادة تشغيل المسح
+      await Navigator.pushNamed(context, route, arguments: device);
 
-  // عند العودة، نبدأ المسح من جديد للتأكد من رؤية الأجهزة المتاحة
-  if (mounted) {
-    _startScan();
-  }
-} else {
-  _connect(device);
-}
+      // عند العودة، نبدأ المسح من جديد للتأكد من رؤية الأجهزة المتاحة
+      if (mounted) {
+        _startScan();
+      }
+    } else {
+      _connect(device);
+    }
   }
 
   Future<void> _connect(BluetoothDevice device) async {

@@ -36,6 +36,9 @@ class AppLocalizationsAr extends AppLocalizations {
   String get generateReport => 'توليد التقرير';
 
   @override
+  String get collectiveReport => 'تقرير مجمع';
+
+  @override
   String get profile => 'الملف الشخصي';
 
   @override
@@ -241,4 +244,31 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get glucose => 'سكر الدم';
+
+  @override
+  String get manualEntry => 'إدخال يدوي';
+
+  @override
+  String get systolic => 'الضغط الانقباضي (SYS)';
+
+  @override
+  String get diastolic => 'الضغط الانبساطي (DIA)';
+
+  @override
+  String get pulse => 'النبض';
+
+  @override
+  String get glucoseValue => 'قيمة السكر (mg/dL)';
+
+  @override
+  String get temperatureValue => 'درجة الحرارة (°C)';
+
+  @override
+  String get addReading => 'إضافة قراءة';
+
+  @override
+  String get readingAdded => 'تمت إضافة القراءة بنجاح';
+
+  @override
+  String get invalidInput => 'يرجى إدخال قيم صحيحة';
 }
