@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_localizations.dart';
 import '../services/storage_service.dart';
 import '../models/app_theme_mode.dart';
+import '../services/notification_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Function(Locale) onLocaleChanged;
@@ -63,11 +64,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     widget.onThemeChanged(newTheme);
   }
 
-  void _toggleAlerts(bool value) {
+  Future<void> _toggleAlerts(bool value) async {
     setState(() {
       _alertsEnabled = value;
     });
-    widget.onAlertsToggle(value);
+    await widget.onAlertsToggle(value);
+    await NotificationService.syncNotifications(enabled: value);
   }
 
   void _toggleEncryption(bool value) async {

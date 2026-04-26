@@ -4,21 +4,31 @@ import 'package:permission_handler/permission_handler.dart';
 import '../utils/logger.dart';
 
 class PermissionsHelper {
+  static Future<int?> _androidSdkInt() async {
+    if (!Platform.isAndroid) return null;
+
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+    return androidInfo.version.sdkInt;
+  }
+
+  static Future<bool> isLocationRequiredForBle() async {
+    final sdk = await _androidSdkInt();
+    if (sdk == null) return false;
+    return sdk < 31;
+  }
 
   /// هل كل الصلاحيات الأساسية موجودة؟
   static Future<bool> hasAllPermissions() async {
     if (!Platform.isAndroid) return true;
 
-    final deviceInfo = DeviceInfoPlugin();
-    final androidInfo = await deviceInfo.androidInfo;
-    final sdk = androidInfo.version.sdkInt;
+    final sdk = await _androidSdkInt();
+    if (sdk == null) return true;
 
     if (sdk >= 31) {
       final scan = await Permission.bluetoothScan.isGranted;
       final connect = await Permission.bluetoothConnect.isGranted;
-      final location = await Permission.locationWhenInUse.isGranted;
-
-      return scan && connect && location;
+      return scan && connect;
     } else {
       return await Permission.locationWhenInUse.isGranted;
     }
@@ -28,9 +38,8 @@ class PermissionsHelper {
   static Future<bool> requestPermissions() async {
     if (!Platform.isAndroid) return true;
 
-    final deviceInfo = DeviceInfoPlugin();
-    final androidInfo = await deviceInfo.androidInfo;
-    final sdk = androidInfo.version.sdkInt;
+    final sdk = await _androidSdkInt();
+    if (sdk == null) return true;
 
     List<Permission> permissions = [];
 
@@ -76,7 +85,7 @@ class PermissionsHelper {
     if (!Platform.isAndroid) return;
 
     if (!await Permission.ignoreBatteryOptimizations.isGranted) {
-      await Permission.ignoreBatteryOptimizations.request();
+      await openAppSettings();
     }
   }
 

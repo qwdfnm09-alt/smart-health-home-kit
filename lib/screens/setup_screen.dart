@@ -4,6 +4,7 @@ import '../../utils/logger.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../services/storage_service.dart';
 import 'package:battery_optimization_helper/battery_optimization_helper.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'edit_profile_screen.dart';
 
 class SetupScreen extends StatefulWidget {
@@ -52,8 +53,14 @@ class _SetupScreenState extends State<SetupScreen>
   bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
 
   Future<void> _checkAll() async {
-    final bluetooth = await Permission.bluetoothScan.isGranted &&
-        await Permission.bluetoothConnect.isGranted;
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+    final sdk = androidInfo.version.sdkInt;
+
+    final bluetooth = sdk >= 31
+        ? await Permission.bluetoothScan.isGranted &&
+            await Permission.bluetoothConnect.isGranted
+        : true;
     final location = await Permission.locationWhenInUse.isGranted;
     final battery = await PermissionsHelper.isBatteryOptimizationDisabled();
 
@@ -75,8 +82,12 @@ class _SetupScreenState extends State<SetupScreen>
     await PermissionsHelper.requestDisableBatteryOptimization();
 
     await _checkAll();
+    final locationRequired = await PermissionsHelper.isLocationRequiredForBle();
 
-    if (_bluetoothGranted && _locationGranted && _batteryUnrestricted) {
+    final hasRequiredPermissions =
+        _bluetoothGranted && (!locationRequired || _locationGranted);
+
+    if (hasRequiredPermissions) {
       await _markSetupCompleted();
       if (!mounted) return;
       _goToProfile();
@@ -85,7 +96,7 @@ class _SetupScreenState extends State<SetupScreen>
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("الرجاء تفعيل كل الصلاحيات قبل المتابعة"),
+          content: Text("الرجاء تفعيل صلاحيات الأجهزة المطلوبة قبل المتابعة"),
         ),
       );
     }

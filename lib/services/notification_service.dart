@@ -7,6 +7,7 @@ import '../main.dart';
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
   FlutterLocalNotificationsPlugin();
+  static Future<void>? _initializationFuture;
 
   static const String _channelId = 'daily_reminder_channel';
   static const String _channelName = 'Daily Reminder';
@@ -14,6 +15,11 @@ class NotificationService {
       'Reminds you to measure your health readings daily.';
 
   static Future<void> init() async {
+    _initializationFuture ??= _initialize();
+    await _initializationFuture;
+  }
+
+  static Future<void> _initialize() async {
     const androidSettings = AndroidInitializationSettings('notification_icon'); // ✅ أيقونة مخصصة
     const initializationSettings = InitializationSettings(android: androidSettings);
 
@@ -48,12 +54,11 @@ class NotificationService {
     final iosPlugin =
     _notifications.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
     await iosPlugin?.requestPermissions(alert: true, badge: true, sound: true);
-
-    // جدولة الإشعار اليومي
-    await scheduleDailyReminder();
   }
 
   static Future<void> showReminderNotification() async {
+    await init();
+
     const androidDetails = AndroidNotificationDetails(
       _channelId,
       _channelName,
@@ -84,6 +89,8 @@ class NotificationService {
   }
 
   static Future<void> scheduleDailyReminder() async {
+    await init();
+
     final now = tz.TZDateTime.now(tz.local);
     var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, 9);
 
@@ -129,7 +136,24 @@ class NotificationService {
     }
   }
 
+  static Future<void> cancelReminderNotifications() async {
+    await init();
+    await _notifications.cancel(0);
+    await _notifications.cancel(1);
+  }
+
+  static Future<void> syncNotifications({required bool enabled}) async {
+    if (!enabled) {
+      await cancelReminderNotifications();
+      return;
+    }
+
+    await scheduleDailyReminder();
+  }
+
   static Future<void> checkAndNotifyNow() async {
+    await init();
+
     final didMeasure = await _didMeasureToday();
     if (!didMeasure) {
       await showReminderNotification();

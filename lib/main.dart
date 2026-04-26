@@ -81,15 +81,7 @@ void main() async {
   };
   */
 
-  debugPrint = (String? message, {int? wrapWidth}) {
-    if (message != null) {
-      AppLogger.logInfo("PRINT: $message");
-    }
-  };
   runApp(const SmartHealthApp());
-
-  await Future.delayed(const Duration(seconds: 1)); // تأخير بسيط لضمان الواجهة اشتغلت
-  await NotificationService.init();
 }
 
 class SmartHealthApp extends StatefulWidget {
@@ -127,7 +119,10 @@ class _SmartHealthAppState extends State<SmartHealthApp> {
 
 
     setState(() {});
-    await NotificationService.checkAndNotifyNow();
+    await NotificationService.syncNotifications(enabled: _alertsEnabled);
+    if (_alertsEnabled) {
+      await NotificationService.checkAndNotifyNow();
+    }
   }
 
   Future<void> _saveTheme(AppThemeMode mode) async {
@@ -154,11 +149,12 @@ class _SmartHealthAppState extends State<SmartHealthApp> {
     StorageService().saveLocale(newLocale.languageCode);
   }
 
-  void _changeAlertsEnabled(bool enabled) {
+  Future<void> _changeAlertsEnabled(bool enabled) async {
     setState(() {
       _alertsEnabled = enabled;
     });
-    _saveAlertsEnabled(enabled);
+    await _saveAlertsEnabled(enabled);
+    await NotificationService.syncNotifications(enabled: enabled);
   }
 
   @override

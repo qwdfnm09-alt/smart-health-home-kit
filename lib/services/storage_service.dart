@@ -155,9 +155,9 @@ class StorageService {
       await AlertService.checkAndGenerateAlert(data);
 
 
-      AppLogger.logInfo("✅ HealthData stored with → value: ${clone2.value}, extra: ${clone2.extra}");
+      AppLogger.logInfo("✅ Health data stored successfully");
     } catch (e) {
-      AppLogger.logError("❌ Error saving HealthData: $e");
+      AppLogger.logError("❌ Error saving health data", e);
     }
   }
 
@@ -169,30 +169,29 @@ class StorageService {
           if (_bpDataBox?.isOpen ?? false) {
             await _bpDataBox?.add(data.copyWith());
             await _putLatestIfNewer(_bpDataBox, data);
-            AppLogger.logInfo("💾 Saved BP data: ${data.toString()}");
+            AppLogger.logInfo("💾 Blood pressure data saved");
           }
           break;
         case DataTypes.glucose:
           if (_glucoseDataBox?.isOpen ?? false) {
             await _glucoseDataBox?.add(data.copyWith());
             await _putLatestIfNewer(_glucoseDataBox, data); // لو glucose
-            AppLogger.logInfo("💾 Saved Glucose data: ${data .toString()}");
+            AppLogger.logInfo("💾 Glucose data saved");
           }
           break;
         case DataTypes.temp:
           if (_tempDataBox?.isOpen ?? false) {
             await _tempDataBox?.add(data.copyWith());
             await _putLatestIfNewer(_tempDataBox, data); // لو temp
-            AppLogger.logInfo("💾 Saved Temp data: ${data.toString()}");
+            AppLogger.logInfo("💾 Temperature data saved");
           }
           break;
         default:
-          AppLogger.logInfo(
-              "⚠️ Unknown type: ${data.type}, saved in health_data only");
+          AppLogger.logInfo("⚠️ Unsupported health data type saved in general history");
       }
     }
     catch (e) {
-      AppLogger.logError("❌ Error adding HealthData: $e");
+      AppLogger.logError("❌ Error adding health data", e);
     }
   }
 
@@ -266,7 +265,6 @@ class StorageService {
 
     // 2️⃣ هات البروفايل
     final profile = getUserProfile();
-    AppLogger.logInfo("🔥 profile = $profile");
 
     if (profile == null) {
       AppLogger.logError("❌ UserProfile is NULL → advice skipped");
@@ -297,7 +295,7 @@ class StorageService {
     await _userProfileBox?.put('profile', profile);
   }
   catch (e) {
-      AppLogger.logError("❌ Error saving UserProfile: $e");
+      AppLogger.logError("❌ Error saving user profile", e);
     }
   }
 
@@ -309,7 +307,7 @@ class StorageService {
     try{
     await _userProfileBox?.put('profile', updatedProfile);
   }catch (e) {
-      AppLogger.logError("❌ Error updating UserProfile: $e");
+      AppLogger.logError("❌ Error updating user profile", e);
     }
   }
 
@@ -323,7 +321,7 @@ class StorageService {
     try{
     await _alertBox?.add(alert);
   }catch (e) {
-      AppLogger.logError("❌ Error adding HealthAlert: $e");
+      AppLogger.logError("❌ Error adding health alert", e);
     }
   }
 
@@ -339,7 +337,7 @@ class StorageService {
     try {
       await _alertBox?.delete(key);
     } catch (e) {
-      AppLogger.logError("❌ Error deleting HealthAlert: $e");
+      AppLogger.logError("❌ Error deleting health alert", e);
     }
   }
 
@@ -350,7 +348,7 @@ class StorageService {
       await _routineBox?.addAll(tasks);
       AppLogger.logInfo("📅 Daily routine saved with ${tasks.length} tasks");
     } catch (e) {
-      AppLogger.logError("❌ Error saving Daily Routine: $e");
+      AppLogger.logError("❌ Error saving daily routine", e);
     }
   }
 
@@ -366,7 +364,7 @@ class StorageService {
         await task.save();
       }
     } catch (e) {
-      AppLogger.logError("❌ Error updating RoutineTask: $e");
+      AppLogger.logError("❌ Error updating routine task", e);
     }
   }
 

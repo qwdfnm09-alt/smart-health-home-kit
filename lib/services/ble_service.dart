@@ -97,7 +97,6 @@ class BleService {
     try {
 
       final parsed = DataParser.parse(data, deviceType: type);
-      AppLogger.logInfo("📊 Parsed Data: $parsed");
 
       // 2️⃣ تحويل حسب النوع
       HealthData? healthData;
@@ -168,27 +167,11 @@ class BleService {
         }
 
         await StorageService().saveHealthDataWithAdvice(healthData);
-        AppLogger.logInfo("💾 Saved health data → ${healthData.type}");
-        AppLogger.logInfo("👉 Stored HealthData fields -> sys:${healthData.systolic}, dia:${healthData.diastolic}, pulse:${healthData.pulse}, extra:${healthData.extra}");
-
-
-        // Logging منظم
-        if (healthData.type == "glucose") {
-          final glucose = healthData.extra?["glucose"] ?? healthData.value;
-          AppLogger.logInfo(
-              "🩸 Glucose: $glucose ${healthData.unit}");
-        } else if (healthData.type == "temp") {
-          AppLogger.logInfo("🌡 Temp: ${healthData.value} ${healthData.unit}");
-        } else if (healthData.type == "bp") {
-          final sys = healthData.systolic;
-          final dia = healthData.diastolic;
-          final pulse = healthData.pulse;
-          AppLogger.logInfo("🩺 BP: $sys/$dia mmHg | Pulse: $pulse bpm");
-        }
+        AppLogger.logInfo("💾 Health data saved successfully");
       }
     }
     catch (e) {
-      AppLogger.logInfo("❌ Error parsing data: $e");
+      AppLogger.logError("❌ Error parsing device data", e);
       return;
     }
   }
@@ -512,12 +495,6 @@ class BleService {
                 .listen((rawData) async {
               if (rawData.isEmpty) return;
 
-              AppLogger.logInfo("📥 Raw Data (DEC): $rawData");
-              final hexString = rawData.map((b) => b.toRadixString(16).padLeft(2, '0')).join(' ');
-              AppLogger.logInfo("📥 Raw Data (HEX): $hexString");
-
-
-
               // 1️⃣ استدعي onDataReceived (اللي بيعمل parsing + logging + saving)
               final deviceType = _detectDeviceType(device.platformName);
 
@@ -562,7 +539,7 @@ class BleService {
 
   // ✍ Write data
   Future<void> writeData(List<int> data) async {
-    AppLogger.logInfo("✍ Writing data: $data");
+    AppLogger.logInfo("✍ Writing data to BLE characteristic");
 
     if (_writeCharacteristic != null) {
       await _writeCharacteristic!.write(data);
@@ -580,7 +557,7 @@ class BleService {
     required String characteristicUuid,
   }) async {
     AppLogger.logInfo(
-        "📖 Reading from device: ${device.platformName}, service: $serviceUuid, characteristic: $characteristicUuid");
+        "📖 Reading from device: ${device.platformName}");
 
     final services = await device.discoverServices();
     for (var service in services) {
@@ -589,7 +566,7 @@ class BleService {
           if (characteristic.uuid.toString().toLowerCase() ==
               characteristicUuid.toLowerCase()) {
             final value = await characteristic.read();
-            AppLogger.logInfo("✅ Read successful: $value");
+            AppLogger.logInfo("✅ Read successful");
             return value;
           }
         }
@@ -687,10 +664,6 @@ class BleService {
 
     int sum = bytes.sublist(0, 9).reduce((a, b) => a + b) + 2;
     bytes[9] = sum & 0xFF;
-
-    for (int i = 0; i < bytes.length; i++) {
-      AppLogger.logInfo("🔑 Glucose handshake byte[$i]: ${bytes[i]}");
-    }
 
     AppLogger.logInfo("🔑 Sending glucose handshake...");
     await writeChar.write(bytes, withoutResponse: false);
