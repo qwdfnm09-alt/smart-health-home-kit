@@ -14,6 +14,7 @@ import '../utils/constants.dart';
 import '../models/health_data.dart';
 import 'charts_screen.dart';
 import 'advice_screen.dart';
+import 'doctor_report_screen.dart';
 
 
 
@@ -687,6 +688,21 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               onTap: () => Navigator.push(context, createSlideRoute(const ChartsScreen())),
                             ),
                             _buildActionCard(
+                              icon: Icons.picture_as_pdf,
+                              title: t.generateReport,
+                              color: Colors.red,
+                              onTap: () => Navigator.push(context, createFadeRoute(const ReportScreen())),
+                            ),
+                            _buildActionCard(
+                              icon: Icons.medical_information,
+                              title: isArabic ? 'التواصل مع الدكتور' : 'Contact Doctor',
+                              color: Colors.green,
+                              onTap: () => Navigator.push(
+                                context,
+                                createSlideRoute(const DoctorReportScreen()),
+                              ),
+                            ),
+                            _buildActionCard(
                               icon: Icons.health_and_safety,
                               title: t.healthadvices,
                               color: Colors.blue,
@@ -703,12 +719,6 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               title: t.aiConsultant,
                               color: Colors.purple,
                               onTap: () => Navigator.pushNamed(context, '/ai_chat'),
-                            ),
-                            _buildActionCard(
-                              icon: Icons.picture_as_pdf,
-                              title: t.generateReport,
-                              color: Colors.red,
-                              onTap: () => Navigator.push(context, createFadeRoute(const ReportScreen())),
                             ),
                             _buildActionCard(
                               icon: Icons.settings,

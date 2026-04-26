@@ -47,12 +47,26 @@ class _AIChatScreenState extends State<AIChatScreen> {
         return;
       }
       bool available = await _speech.initialize(
-        onStatus: (val) { if (val == 'done' || val == 'notListening') setState(() => _isListening = false); },
+        onStatus: (val) {
+          if (!mounted) return;
+          if (val == 'done' || val == 'notListening') {
+            setState(() => _isListening = false);
+          }
+        },
         onError: (val) => AppLogger.logError('Speech Error: $val'),
       );
+      if (!mounted) return;
       if (available) {
         setState(() => _isListening = true);
-        _speech.listen(onResult: (val) => setState(() { _controller.text = val.recognizedWords; }), localeId: 'ar_SA');
+        _speech.listen(
+          onResult: (val) {
+            if (!mounted) return;
+            setState(() {
+              _controller.text = val.recognizedWords;
+            });
+          },
+          localeId: 'ar_SA',
+        );
       }
     } else {
       setState(() => _isListening = false);
@@ -65,6 +79,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
       if (image != null) {
         final bytes = await image.readAsBytes();
+        if (!mounted) return;
         setState(() { _selectedImage = image; _imageBytes = bytes; });
       }
     } catch (e) { AppLogger.logError("Error picking image: $e"); }
@@ -104,6 +119,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
           .toList();
 
       final response = await AIService().sendMessage(currentText, imageBytes: currentImage, chatHistory: history);
+      if (!mounted) return;
 
       setState(() {
         _messages.add({
@@ -115,9 +131,19 @@ class _AIChatScreenState extends State<AIChatScreen> {
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() { _messages.add({'role': 'ai', 'text': 'عذراً، حدث خطأ ما.'}); _isLoading = false; });
     }
+    if (!mounted) return;
     _scrollToBottom();
+  }
+
+  @override
+  void dispose() {
+    _speech.stop();
+    _controller.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override

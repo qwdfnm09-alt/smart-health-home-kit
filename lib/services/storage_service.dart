@@ -164,9 +164,7 @@ class StorageService {
 
   Future<void> addHealthData(HealthData data) async {
     try {
-
-
-      switch (data.type) {
+      switch (_normalizeDataType(data.type)) {
         case DataTypes.bp:
           if (_bpDataBox?.isOpen ?? false) {
             await _bpDataBox?.add(data.copyWith());
@@ -207,18 +205,31 @@ class StorageService {
 
 
   List<HealthData> getAllByType(String type) {
-    List<HealthData> all = [];
-    switch (type) {
+    Box<HealthData>? box;
+    switch (_normalizeDataType(type)) {
       case DataTypes.bp:
-        all = _bpDataBox?.values.toList() ?? [];
+        box = _bpDataBox;
         break;
       case DataTypes.glucose:
-        all = _glucoseDataBox?.values.toList() ?? [];
+        box = _glucoseDataBox;
         break;
       case DataTypes.temp:
-        all = _tempDataBox?.values.toList() ?? [];
+        box = _tempDataBox;
+        break;
+      default:
+        box = null;
         break;
     }
+
+    final all = box == null
+        ? <HealthData>[]
+        : box
+            .toMap()
+            .entries
+            .where((entry) => entry.key != 'latest')
+            .map((entry) => entry.value)
+            .toList();
+
     all.sort((a, b) => a.timestamp.compareTo(b.timestamp));
     return all;
   }
@@ -226,7 +237,7 @@ class StorageService {
 
 
   HealthData? getLatestByType(String type) {
-    switch (type) {
+    switch (_normalizeDataType(type)) {
       case DataTypes.bp:
         return _bpDataBox?.get('latest');
       case DataTypes.glucose:
@@ -427,6 +438,29 @@ class StorageService {
     if (currentLatest == null || !currentLatest.timestamp.isAfter(data.timestamp)) {
       await box.put('latest', data.copyWith());
     }
+  }
+
+  String _normalizeDataType(String type) {
+    final normalized = type.trim().toLowerCase();
+
+    if (normalized == DataTypes.glucose.toLowerCase() || normalized == 'gl') {
+      return DataTypes.glucose;
+    }
+
+    if (normalized == DataTypes.temp.toLowerCase() ||
+        normalized == 'temperature' ||
+        normalized == 'thermometer') {
+      return DataTypes.temp;
+    }
+
+    if (normalized == DataTypes.bp.toLowerCase() ||
+        normalized == 'bp' ||
+        normalized == 'blood_pressure' ||
+        normalized == 'bloodpressure') {
+      return DataTypes.bp;
+    }
+
+    return type;
   }
 
 }

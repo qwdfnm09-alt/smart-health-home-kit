@@ -1,6 +1,6 @@
 #file: noinspection YAMLSchemaValidation
 name: smart_health_home_kit
-description: Smart Health Kit app with BLE, Hive, Charts, PDF, and Modular code.
+description: T-MED - Smart Health Kit app with BLE, Hive, Charts, PDF, and Modular code.
 
 version: 1.0.0+1
 

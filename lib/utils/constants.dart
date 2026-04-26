@@ -44,13 +44,14 @@ class Constants {
   static const String appWebsiteUrl = 'https://smarthealth.framer.website/';
   static const String supportEmail = 'https://docs.google.com/forms/d/e/1FAIpQLSdNAejGDWOW_hFHh2rUyzHLiXQKwp6P0uVJ0gqRxK281sRksA/viewform';
   static const String appName = 'Smart Health Kit';
+  static const String tmedDoctorPhone = '2001203939070';
 
 
   /// ✅ حدود التنبيهات (متوافقة مع Helper)
   ///  لباقي الأنواع (سكر، حرارة)
   static const Map<String, Map<String, double>> alertThresholds = {
     DataTypes.glucose: {"min": 70.0, "max": 200.0},
-    DataTypes.temp: {"min": 36.1, "max": 37.5},
+    DataTypes.temp: {"min": 36.0, "max": 37.5},
     'pulse': {"min": 60.0, "max": 100.0},
   };
   // حدود الضغط (مبنية كـ خريطة بمفتاح واحد DataTypes.bp)

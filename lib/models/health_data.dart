@@ -93,7 +93,7 @@ class HealthData extends HiveObject {
   /// ✅ GlucoseReading -> HealthData
   factory HealthData.fromGlucose(GlucoseReading g) {
     return HealthData(
-      type: "glucose",
+      type: DataTypes.glucose,
       value: g.glucose.toDouble(),
       glucose: g.glucose,
       timestamp: g.datetime,
@@ -105,7 +105,7 @@ class HealthData extends HiveObject {
 
   factory HealthData.fromThermometer(ThermometerReading t) {
     return HealthData(
-      type: "temp",
+      type: DataTypes.temp,
       value: t.temperature,
       temperature: t.temperature,
       timestamp: t.datetime,
@@ -137,7 +137,7 @@ class HealthData extends HiveObject {
     String source = "glucose",
   }) {
     return HealthData(
-      type: "glucose",
+      type: DataTypes.glucose,
       value: glucose.toDouble(),
       glucose: glucose,
       timestamp: datetime,
@@ -153,7 +153,7 @@ class HealthData extends HiveObject {
     String source = "thermometer",
   }) {
     return HealthData(
-      type: "temp",
+      type: DataTypes.temp,
       value: temperature,
       temperature: temperature,
       timestamp: datetime,

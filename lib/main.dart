@@ -19,6 +19,7 @@ import 'screens/routine_screen.dart';
 import 'screens/ai_chat_screen.dart';
 import 'screens/privacy_policy_screen.dart';
 import 'screens/advice_screen.dart';
+import 'screens/doctor_report_screen.dart';
 import 'services/storage_service.dart';
 import 'models/user_profile.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -368,6 +369,8 @@ class _SmartHealthAppState extends State<SmartHealthApp> {
                 return createSlideRoute(const AIChatScreen());
               case '/privacy_policy':
                 return createFadeRoute(const PrivacyPolicyScreen());
+              case '/doctor_report':
+                return createSlideRoute(const DoctorReportScreen());
               default:
                 return MaterialPageRoute(
                   builder: (_) => const Scaffold(
