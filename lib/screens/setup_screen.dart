@@ -18,6 +18,7 @@ class _SetupScreenState extends State<SetupScreen>
     with SingleTickerProviderStateMixin {
   bool _bluetoothGranted = false;
   bool _locationGranted = false;
+  bool _locationRequired = false;
   bool _batteryUnrestricted = false;
   bool _loading = false;
 
@@ -61,12 +62,14 @@ class _SetupScreenState extends State<SetupScreen>
         ? await Permission.bluetoothScan.isGranted &&
             await Permission.bluetoothConnect.isGranted
         : true;
+    final locationRequired = await PermissionsHelper.isLocationRequiredForBle();
     final location = await Permission.locationWhenInUse.isGranted;
     final battery = await PermissionsHelper.isBatteryOptimizationDisabled();
 
     setState(() {
       _bluetoothGranted = bluetooth;
       _locationGranted = location;
+      _locationRequired = locationRequired;
       _batteryUnrestricted = battery;
     });
 
@@ -201,7 +204,7 @@ class _SetupScreenState extends State<SetupScreen>
         child: Column(
           children: [
             const Text(
-              "علشان التطبيق يشتغل بكفاءة، محتاج شوية صلاحيات بسيطة 👇",
+              "لتوصيل الأجهزة الطبية بسهولة، فعّل صلاحيات البلوتوث الأساسية. بعض الإعدادات الأخرى قد تكون مطلوبة فقط على أجهزة معينة.",
               style: TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 24),
@@ -217,7 +220,9 @@ class _SetupScreenState extends State<SetupScreen>
             _permissionCard(
               title: "Location",
               description:
-              "مطلوب من أندرويد لتشغيل البلوتوث بشكل صحيح (ولا يتم تتبع موقعك).",
+              _locationRequired
+                  ? "قد يطلب أندرويد هذا الإذن على بعض الأجهزة أو الإصدارات الأقدم حتى يعمل مسح البلوتوث بشكل صحيح. لا نستخدمه لتتبع موقعك."
+                  : "غير مطلوب كإذن أساسي على هذا الجهاز حالياً، لكنه قد يظهر فقط على بعض الإصدارات الأقدم من أندرويد لتحسين عمل مسح البلوتوث.",
               granted: _locationGranted,
               icon: Icons.location_on,
             ),
@@ -225,7 +230,7 @@ class _SetupScreenState extends State<SetupScreen>
             _permissionCard(
               title: "Battery Optimization",
               description:
-              "لمنع النظام من إيقاف التطبيق أثناء الاتصال بالأجهزة في الخلفية.",
+              "تحسين اختياري يساعد على بقاء التطبيق أكثر استقراراً عند استخدام الأجهزة في الخلفية، لكنه ليس شرطاً لبدء استخدام التطبيق.",
               granted: _batteryUnrestricted,
               icon: Icons.battery_full,
               action: !_batteryUnrestricted

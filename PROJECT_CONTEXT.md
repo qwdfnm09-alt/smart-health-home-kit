@@ -80,7 +80,7 @@ The project follows a modular architecture:
 ---
 
 ## 🔐 Data & Security
-- Optional encryption for Hive data
+- Encrypted local storage for Hive data
 - Local-first storage for health records
 - AI requests may send user-selected text or images to Google Gemini
 - Technical crash reports may be sent to Firebase Crashlytics
