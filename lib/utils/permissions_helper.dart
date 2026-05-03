@@ -47,7 +47,6 @@ class PermissionsHelper {
       permissions.addAll([
         Permission.bluetoothScan,
         Permission.bluetoothConnect,
-        Permission.locationWhenInUse,
       ]);
     } else {
       permissions.add(Permission.locationWhenInUse);

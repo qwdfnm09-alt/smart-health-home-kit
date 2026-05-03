@@ -300,6 +300,9 @@ class StorageService {
   }
 
   UserProfile? getUserProfile() {
+    if (_userProfileBox == null || !(_userProfileBox?.isOpen ?? false)) {
+      return null;
+    }
     return _userProfileBox?.get('profile');
   }
 
@@ -326,6 +329,9 @@ class StorageService {
   }
 
   List<HealthAlert> getAllAlerts() {
+    if (_alertBox == null || !(_alertBox?.isOpen ?? false)) {
+      return [];
+    }
     return _alertBox?.values.toList() ?? [];
   }
 
@@ -353,6 +359,9 @@ class StorageService {
   }
 
   List<RoutineTask> getDailyRoutine() {
+    if (_routineBox == null || !(_routineBox?.isOpen ?? false)) {
+      return [];
+    }
     return _routineBox?.values.toList() ?? [];
   }
 
@@ -398,16 +407,28 @@ class StorageService {
     await _bpDataBox?.clear();
     await _glucoseDataBox?.clear();
     await _tempDataBox?.clear();
+    await _routineBox?.clear();
+
+    if (Hive.isBoxOpen('adviceBox')) {
+      await Hive.box<HealthAdvice>('adviceBox').clear();
+    }
+    if (Hive.isBoxOpen('remindLaterBox')) {
+      await Hive.box('remindLaterBox').clear();
+    }
+    if (Hive.isBoxOpen('app_settings')) {
+      await Hive.box('app_settings').clear();
+    }
 
     // ✅ نمسح الإعدادات من الـ secure storage
     await _secureStorage.delete(key: 'locale');
     await _secureStorage.delete(key: 'theme');
     await _secureStorage.delete(key: 'profile_completed');
+    await _secureStorage.delete(key: 'profileCreated');
     await _secureStorage.delete(key: _encryptionEnabledKey);
-    await _secureStorage.delete(key: _encryptionKeyName); // 🆕 أهم حاجة
 
-    // 🆕 نقفل كل الـ Boxes بعد الـ clear
-    await close();
+    if (Hive.isBoxOpen('app_settings')) {
+      await Hive.box('app_settings').put('setupCompleted', true);
+    }
   }
 
   // -------- close --------

@@ -79,7 +79,6 @@ class _SetupScreenState extends State<SetupScreen>
 
     await PermissionsHelper.requestPermissions();
     await PermissionsHelper.requestNotificationPermission();
-    await PermissionsHelper.requestDisableBatteryOptimization();
 
     await _checkAll();
     final locationRequired = await PermissionsHelper.isLocationRequiredForBle();

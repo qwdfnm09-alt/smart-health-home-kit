@@ -33,9 +33,9 @@ The project follows a modular architecture:
 ### 2. Data Storage
 - Local storage using Hive
 - Stores:
-    - User profiles
+    - User profile
     - Health readings
-    - History per user
+    - History for the active profile
 
 ---
 
@@ -65,10 +65,10 @@ The project follows a modular architecture:
 ---
 
 ## 👤 User System
-- Multi-user support (family members)
-- Each user has:
-    - Profile (age, gender, conditions)
-    - Separate health history
+- Single active user profile
+- The profile includes:
+    - Age, gender, and conditions
+    - Personal health history
 
 ---
 
@@ -81,7 +81,9 @@ The project follows a modular architecture:
 
 ## 🔐 Data & Security
 - Optional encryption for Hive data
-- Local-first storage (no cloud dependency yet)
+- Local-first storage for health records
+- AI requests may send user-selected text or images to Google Gemini
+- Technical crash reports may be sent to Firebase Crashlytics
 
 ---
 

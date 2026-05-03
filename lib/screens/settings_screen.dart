@@ -30,7 +30,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late Locale _selectedLocale;
   late AppThemeMode _selectedTheme;
   late bool _alertsEnabled;
-  bool _encryptionEnabled = false; // حالة تشفير البيانات
 
   @override
   void initState() {
@@ -38,15 +37,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _selectedLocale = widget.initialLocale;
     _selectedTheme = widget.currentTheme;
     _alertsEnabled = widget.alertsEnabled;
-
-    _loadEncryptionSetting();
-  }
-
-  Future<void> _loadEncryptionSetting() async {
-    final enabled = await StorageService().isEncryptionEnabled();
-    setState(() {
-      _encryptionEnabled = enabled;
-    });
   }
 
   void _changeLanguage(Locale newLocale) {
@@ -70,13 +60,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
     await widget.onAlertsToggle(value);
     await NotificationService.syncNotifications(enabled: value);
-  }
-
-  void _toggleEncryption(bool value) async {
-    setState(() {
-      _encryptionEnabled = value;
-    });
-    await StorageService().setEncryptionEnabled(value);
   }
 
   Widget buildSettingCard({
@@ -241,11 +224,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               buildSettingCard(
                 icon: Icons.lock,
                 title: t.enableDataEncryption,
-                trailing: Switch(
-                  value: _encryptionEnabled,
-                  onChanged: _toggleEncryption,
-                  activeThumbColor: Colors.white,
-                ),
+                subtitle: _selectedLocale.languageCode == 'ar'
+                    ? 'يتم حفظ بيانات التطبيق الحساسة محليًا باستخدام تخزين مشفر.'
+                    : 'Sensitive app data is stored locally using encrypted storage.',
+                trailing: const Icon(Icons.verified_user, color: Colors.white),
               ),
 
               const SizedBox(height:16),
@@ -310,7 +292,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (!context.mounted) return;
                     Navigator.pushNamedAndRemoveUntil(
                       context,
-                      '/welcome',
+                      '/edit_profile',
                           (route) => false,
                     );
                   }

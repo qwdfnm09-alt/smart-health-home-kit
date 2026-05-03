@@ -108,32 +108,17 @@ class NotificationService {
       icon: 'notification_icon',
     );
 
-    try {
-      await _notifications.zonedSchedule(
-        1,
-        'تذكير صحي 🩺',
-        'لم تسجل أي قراءات اليوم، يُفضل قياس ضغطك وسكرك الآن.',
-        scheduled,
-        const NotificationDetails(android: androidDetails),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-        UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
-    } catch (e) {
-      // لو ما عندوش صلاحية exact alarms، استخدم inexact fallback
-      await _notifications.zonedSchedule(
-        1,
-        'تذكير صحي 🩺',
-        'لم تسجل أي قراءات اليوم، يُفضل قياس ضغطك وسكرك الآن.',
-        scheduled,
-        const NotificationDetails(android: androidDetails),
-        androidScheduleMode: AndroidScheduleMode.inexact,
-        uiLocalNotificationDateInterpretation:
-        UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
-    }
+    await _notifications.zonedSchedule(
+      1,
+      'تذكير صحي 🩺',
+      'لم تسجل أي قراءات اليوم، يُفضل قياس ضغطك وسكرك الآن.',
+      scheduled,
+      const NotificationDetails(android: androidDetails),
+      androidScheduleMode: AndroidScheduleMode.inexact,
+      uiLocalNotificationDateInterpretation:
+      UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
   }
 
   static Future<void> cancelReminderNotifications() async {

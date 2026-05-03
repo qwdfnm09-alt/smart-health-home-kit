@@ -19,7 +19,7 @@ Seamlessly connect and sync data from various medical devices:
 
 ### 📊 Data Visualization & Insights
 - Interactive charts showing health trends over time (using `fl_chart`).
-- Historical data tracking for multiple family members.
+- Historical data tracking for the active user profile.
 - Smart analysis of readings to detect abnormal values.
 
 ### 🧠 AI-Powered Health Advice
@@ -31,9 +31,8 @@ Seamlessly connect and sync data from various medical devices:
 - Generate detailed PDF reports of health data.
 - Perfect for sharing with doctors or keeping personal medical records.
 
-### 👥 Multi-User Support
-- Support for multiple profiles (family members).
-- Individual health history and personalized settings for each user.
+### 👤 User Profile
+- Single active profile with personalized health history and settings.
 - Local-first storage using **Hive** for speed and privacy.
 
 ---
@@ -98,9 +97,11 @@ The app supports both **Arabic** and **English** out of the box, with a focus on
 ---
 
 ## 🛡️ Privacy & Security
-- All health data is stored **locally** on the device by default.
-- Support for encrypted local storage.
-- No third-party data sharing without user consent.
+- Health data and profile data are stored **locally** on the device by default.
+- Encrypted local storage is used for app data.
+- AI requests may send user-selected text or images to Google Gemini.
+- Technical crash reports may be sent to Firebase Crashlytics to improve stability.
+- PDF and WhatsApp sharing happen only when initiated by the user.
 
 ---
 

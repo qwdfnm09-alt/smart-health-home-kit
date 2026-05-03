@@ -6,6 +6,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../services/ai_service.dart';
 import '../utils/logger.dart';
 
@@ -17,10 +18,13 @@ class AIChatScreen extends StatefulWidget {
 }
 
 class _AIChatScreenState extends State<AIChatScreen> {
+  static const String _aiDisclosureAcceptedKey = 'ai_disclosure_accepted';
+
   final TextEditingController _controller = TextEditingController();
   final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
   final ScrollController _scrollController = ScrollController();
+  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
 
   final ImagePicker _picker = ImagePicker();
   XFile? _selectedImage;
@@ -28,6 +32,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
 
   final stt.SpeechToText _speech = stt.SpeechToText();
   bool _isListening = false;
+  bool _aiDisclosureAccepted = false;
 
   @override
   void initState() {
@@ -36,9 +41,62 @@ class _AIChatScreenState extends State<AIChatScreen> {
       'role': 'ai',
       'text': 'أهلاً بك! أنا استشارك الصحي الذكي. يمكنك التحدث إليّ مباشرة بالضغط على زر المايك 🎙️'
     });
+    _loadAiDisclosureStatus();
+  }
+
+  bool get _isArabic => Localizations.localeOf(context).languageCode == 'ar';
+
+  Future<void> _loadAiDisclosureStatus() async {
+    final accepted = await _secureStorage.read(key: _aiDisclosureAcceptedKey);
+    if (!mounted) return;
+    setState(() {
+      _aiDisclosureAccepted = accepted == 'true';
+    });
+  }
+
+  Future<bool> _ensureAiDisclosureAccepted() async {
+    if (_aiDisclosureAccepted) return true;
+    if (!mounted) return false;
+
+    final accepted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text(_isArabic ? 'تنبيه الخصوصية' : 'Privacy Notice'),
+        content: Text(
+          _isArabic
+              ? 'عند استخدام T-MED AI، سيتم إرسال النصوص أو الصور التي تختارها إلى Google Gemini لمعالجة طلبك. وإذا استخدمت الميكروفون، سيُطلب إذن الصوت لهذه الميزة فقط. هل توافق على المتابعة؟'
+              : 'When you use T-MED AI, the text or images you choose may be sent to Google Gemini to process your request. If you use the microphone, audio permission will be requested for this feature only. Do you want to continue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(_isArabic ? 'إلغاء' : 'Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(_isArabic ? 'موافق' : 'Continue'),
+          ),
+        ],
+      ),
+    );
+
+    if (accepted == true) {
+      await _secureStorage.write(key: _aiDisclosureAcceptedKey, value: 'true');
+      if (!mounted) return true;
+      setState(() {
+        _aiDisclosureAccepted = true;
+      });
+      return true;
+    }
+
+    return false;
   }
 
   void _listen() async {
+    final canProceed = await _ensureAiDisclosureAccepted();
+    if (!canProceed || !mounted) return;
+
     if (!_isListening) {
       final status = await Permission.microphone.request();
       if (!mounted) return;
@@ -75,6 +133,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
   }
 
   Future<void> _pickImage() async {
+    final canProceed = await _ensureAiDisclosureAccepted();
+    if (!canProceed) return;
+
     try {
       final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
       if (image != null) {
@@ -97,6 +158,9 @@ class _AIChatScreenState extends State<AIChatScreen> {
     final text = _controller.text.trim();
     final imageBytes = _imageBytes;
     if (text.isEmpty && imageBytes == null) return;
+
+    final canProceed = await _ensureAiDisclosureAccepted();
+    if (!canProceed) return;
 
     setState(() {
       _messages.add({
