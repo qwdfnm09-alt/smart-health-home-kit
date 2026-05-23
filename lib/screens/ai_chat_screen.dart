@@ -65,8 +65,8 @@ class _AIChatScreenState extends State<AIChatScreen> {
         title: Text(_isArabic ? 'تنبيه الخصوصية' : 'Privacy Notice'),
         content: Text(
           _isArabic
-              ? 'عند استخدام T-MED AI، سيتم إرسال النصوص أو الصور التي تختارها إلى Google Gemini لمعالجة طلبك. وإذا استخدمت الميكروفون، سيُطلب إذن الصوت لهذه الميزة فقط. هل توافق على المتابعة؟'
-              : 'When you use T-MED AI, the text or images you choose may be sent to Google Gemini to process your request. If you use the microphone, audio permission will be requested for this feature only. Do you want to continue?',
+              ? 'عند استخدام T-MED AI، قد يتم إرسال رسالتك أو الصورة التي تختارها، مع بعض بيانات ملفك الصحي وآخر القراءات، إلى Google Gemini لمعالجة طلبك. وإذا استخدمت الميكروفون، سيُطلب إذن الصوت لهذه الميزة فقط. هذه المعلومات استرشادية ولا تغني عن الطبيب. هل توافق على المتابعة؟'
+              : 'When you use T-MED AI, your message or selected image, plus some profile details and recent readings, may be sent to Google Gemini to process your request. If you use the microphone, audio permission will be requested for this feature only. This information is informational and not a substitute for medical advice. Do you want to continue?',
         ),
         actions: [
           TextButton(

@@ -178,7 +178,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get availableDevices => 'Available Devices';
 
   @override
-  String get enableDataEncryption => 'Enable Data Encryption';
+  String get enableDataEncryption => 'Data Encryption Enabled';
 
   @override
   String get noDataToDisplay => 'No data to display';

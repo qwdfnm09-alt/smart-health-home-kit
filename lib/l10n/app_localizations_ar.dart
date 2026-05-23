@@ -177,7 +177,7 @@ class AppLocalizationsAr extends AppLocalizations {
   String get availableDevices => 'الأجهزة المتاحة';
 
   @override
-  String get enableDataEncryption => 'تفعيل تشفير البيانات';
+  String get enableDataEncryption => 'تشفير البيانات مفعل';
 
   @override
   String get noDataToDisplay => 'لا توجد بيانات للعرض';

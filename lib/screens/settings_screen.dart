@@ -220,13 +220,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               const SizedBox(height: 16),
 
-              // زر تفعيل/ايقاف تشفير البيانات
+              // حالة تشفير البيانات: التشفير مفعل دائمًا في StorageService.
               buildSettingCard(
                 icon: Icons.lock,
                 title: t.enableDataEncryption,
                 subtitle: _selectedLocale.languageCode == 'ar'
-                    ? 'يتم حفظ بيانات التطبيق الحساسة محليًا باستخدام تخزين مشفر.'
-                    : 'Sensitive app data is stored locally using encrypted storage.',
+                    ? 'يتم حفظ بياناتك الصحية وبيانات الملف الشخصي محليًا باستخدام تشفير آمن.'
+                    : 'Your health and profile data are stored locally using secure encryption.',
                 trailing: const Icon(Icons.verified_user, color: Colors.white),
               ),
 

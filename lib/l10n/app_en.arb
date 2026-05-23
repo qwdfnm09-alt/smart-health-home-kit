@@ -58,7 +58,7 @@
   "fontSize": "Font Size",
   "enableAlerts": "Enable Alerts",
   "availableDevices": "Available Devices",
-  "enableDataEncryption": "Enable Data Encryption",
+  "enableDataEncryption": "Data Encryption Enabled",
   "noDataToDisplay": "No data to display",
   "outOfRangeWarning": " Needs follow-up",
   "withinNormalRange": " normal ",

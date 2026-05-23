@@ -58,7 +58,7 @@
   "fontSize": "حجم الخط",
   "enableAlerts": "تفعيل التنبيهات",
   "availableDevices": "الأجهزة المتاحة",
-  "enableDataEncryption": "تفعيل تشفير البيانات",
+  "enableDataEncryption": "تشفير البيانات مفعل",
   "noDataToDisplay": "لا توجد بيانات للعرض",
   "outOfRangeWarning": " محتاج متابعة ",
   "withinNormalRange": "طبيعى ",

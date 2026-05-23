@@ -431,7 +431,7 @@ abstract class AppLocalizations {
   /// No description provided for @enableDataEncryption.
   ///
   /// In en, this message translates to:
-  /// **'Enable Data Encryption'**
+  /// **'Data Encryption Enabled'**
   String get enableDataEncryption;
 
   /// No description provided for @noDataToDisplay.

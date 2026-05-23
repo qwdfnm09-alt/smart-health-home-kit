@@ -81,6 +81,7 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
       if (parsed['device'] == 'blood_pressure') {
         final healthData = parsed['healthData'];
         if (healthData is! HealthData) return;
+        if (!mounted) return;
 
         setState(() {
           _latestReading = healthData;
@@ -131,6 +132,7 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
       notifyCharUuid: _bpMonitor.notifyCharUuid,
       deviceType: DeviceType.bloodPressure,
       onError: () {
+        if (!mounted) return;
         AppLogger.logInfo("❌ Connection failed - check name/uuid/permissions");
         setState(() => _isConnecting = false);
         ScaffoldMessenger.of(context).showSnackBar(

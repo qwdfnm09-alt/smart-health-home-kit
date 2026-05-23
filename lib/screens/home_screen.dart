@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -37,6 +38,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   bool _isScanning = false;
   bool _isOpeningDeviceScreen = false;
   String? _pendingDeviceId;
+  StreamSubscription<String>? _errorSubscription;
+  StreamSubscription<List<ScanResult>>? _scanSubscription;
 
   late AnimationController _controller;
 
@@ -45,7 +48,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     super.initState();
 
     // ✅ Listen to BLE Errors (like Bluetooth is OFF)
-    _bleService.errors.listen((message) {
+    _errorSubscription = _bleService.errors.listen((message) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -70,24 +73,30 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   void _startScan() async {
     try {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('جاري البحث عن الأجهزة...')),
+      );
       setState(() {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('جاري البحث عن الأجهزة...')),
-        );
         _scanResults = [];
         _isScanning = true;
       });
-      _bleService.scanForDevices(timeout: const Duration(seconds: 8)).listen((results) {
+      await _scanSubscription?.cancel();
+      _scanSubscription = _bleService.scanForDevices(timeout: const Duration(seconds: 8)).listen((results) {
+        if (!mounted) return;
         setState(() {
           _scanResults = results;
         });
-      }).onDone(() {
+      });
+      _scanSubscription?.onDone(() {
+        if (!mounted) return;
         setState(() {
           _isScanning = false;
         });
         _bleService.stopScan();
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isScanning = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('تعذر بدء المسح: $e')),
@@ -96,7 +105,10 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   void _stopScan() {
+    _scanSubscription?.cancel();
+    _scanSubscription = null;
     _bleService.stopScan();
+    if (!mounted) return;
     setState(() {
       _isScanning = false;
     });
@@ -178,6 +190,8 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   void dispose() {
+    _errorSubscription?.cancel();
+    _scanSubscription?.cancel();
     _scanResults.clear();
     _controller.dispose();
     _bleService.stopScan();

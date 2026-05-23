@@ -79,6 +79,7 @@ class _GlucoseScreenState extends State<GlucoseScreen> {
       if (parsed['device'] == 'glucose') {
         final healthData = parsed['healthData'];
         if (healthData is! HealthData) return;
+        if (!mounted) return;
 
         setState(() {
           _latestReading = healthData;
@@ -127,6 +128,7 @@ class _GlucoseScreenState extends State<GlucoseScreen> {
       notifyCharUuid: _glucoseMeter.notifyCharUuid,
       deviceType: DeviceType.glucose, // ✅ مهم عشان DataParser يعرف
       onError: () {
+        if (!mounted) return;
         AppLogger.logInfo("❌ Connection failed - check name/uuid/permissions");
         setState(() => _isConnecting = false);
         ScaffoldMessenger.of(context).showSnackBar(

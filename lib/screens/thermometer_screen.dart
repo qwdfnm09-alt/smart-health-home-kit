@@ -75,6 +75,7 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
       if (parsed['device'] == 'thermometer') {
         final healthData = parsed['healthData'];
         if (healthData is! HealthData) return;
+        if (!mounted) return;
 
         setState(() {
           _latestReading = healthData;
@@ -123,6 +124,7 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
       notifyCharUuid: _thermometer.notifyCharUuid,
       deviceType: DeviceType.thermometer,
       onError: () {
+        if (!mounted) return;
         AppLogger.logInfo("❌ Connection failed - check name/uuid/permissions");
         setState(() => _isConnecting = false);
         ScaffoldMessenger.of(context).showSnackBar(
