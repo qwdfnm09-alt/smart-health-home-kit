@@ -14,6 +14,10 @@ import '../models/adapters/advice_priority_adapter.dart';
 import '../models/adapters/advice_risk_adapter.dart';
 import 'alert_service.dart';
 import '../models/routine_task.dart';
+import '../models/medication.dart';
+import '../models/medication_intake.dart';
+import '../models/adapters/medication_adapter.dart';
+import '../models/adapters/medication_intake_adapter.dart';
 
 
 class StorageService {
@@ -41,6 +45,8 @@ class StorageService {
   Box<UserProfile>? _userProfileBox;
   Box<HealthAlert>? _alertBox;
   Box<RoutineTask>? _routineBox;
+  Box<Medication>? _medicationBox;
+  Box<MedicationIntake>? _medicationIntakeBox;
   final _secureStorage = const FlutterSecureStorage();
 
   static const _bpBoxName = 'bp_data';
@@ -51,6 +57,9 @@ class StorageService {
 
   Box<HealthData> get healthDataBox => Hive.box<HealthData>('health_data');
   Box<RoutineTask> get routineBox => Hive.box<RoutineTask>('routine_tasks');
+  Box<Medication> get medicationBox => Hive.box<Medication>('medications');
+  Box<MedicationIntake> get medicationIntakeBox =>
+      Hive.box<MedicationIntake>('medication_intakes');
 
 
   Future<void> init() async {
@@ -101,6 +110,10 @@ class StorageService {
     if (!Hive.isAdapterRegistered(12)) Hive.registerAdapter(AdvicePriorityAdapter());
     if (!Hive.isAdapterRegistered(13)) Hive.registerAdapter(AdviceRiskAdapter());
     if (!Hive.isAdapterRegistered(15)) Hive.registerAdapter(RoutineTaskAdapter());
+    if (!Hive.isAdapterRegistered(20)) Hive.registerAdapter(MedicationAdapter());
+    if (!Hive.isAdapterRegistered(21)) {
+      Hive.registerAdapter(MedicationIntakeAdapter());
+    }
   }
 
   Future<void> _openAllBoxes(HiveCipher? cipher) async {
@@ -111,6 +124,11 @@ class StorageService {
     _userProfileBox = await Hive.openBox<UserProfile>('user_profile', encryptionCipher: cipher);
     _alertBox = await Hive.openBox<HealthAlert>('alerts', encryptionCipher: cipher);
     _routineBox = await Hive.openBox<RoutineTask>('routine_tasks', encryptionCipher: cipher);
+    _medicationBox = await Hive.openBox<Medication>('medications', encryptionCipher: cipher);
+    _medicationIntakeBox = await Hive.openBox<MedicationIntake>(
+      'medication_intakes',
+      encryptionCipher: cipher,
+    );
 
     await Hive.openBox<HealthAdvice>('adviceBox', encryptionCipher: cipher);
     await Hive.openBox('remindLaterBox', encryptionCipher: cipher);
@@ -377,6 +395,74 @@ class StorageService {
     }
   }
 
+  // -------- Medications --------
+  Future<void> saveMedication(Medication medication) async {
+    try {
+      await _medicationBox?.put(medication.id, medication);
+    } catch (e) {
+      AppLogger.logError("❌ Error saving medication", e);
+    }
+  }
+
+  Future<void> deleteMedication(String medicationId) async {
+    try {
+      await _medicationBox?.delete(medicationId);
+    } catch (e) {
+      AppLogger.logError("❌ Error deleting medication", e);
+    }
+  }
+
+  List<Medication> getAllMedications() {
+    final all = _medicationBox?.values.toList() ?? [];
+    all.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    return all;
+  }
+
+  Medication? getMedicationById(String id) {
+    if (_medicationBox == null || !(_medicationBox?.isOpen ?? false)) {
+      return null;
+    }
+    return _medicationBox?.get(id);
+  }
+
+  Future<void> saveMedicationIntake(MedicationIntake intake) async {
+    try {
+      await _medicationIntakeBox?.put(intake.id, intake);
+    } catch (e) {
+      AppLogger.logError("❌ Error saving medication intake", e);
+    }
+  }
+
+  Future<void> deleteMedicationIntake(String intakeId) async {
+    try {
+      await _medicationIntakeBox?.delete(intakeId);
+    } catch (e) {
+      AppLogger.logError("❌ Error deleting medication intake", e);
+    }
+  }
+
+  Future<void> deleteMedicationIntakesByMedicationId(String medicationId) async {
+    final intakes = getMedicationIntakesByMedicationId(medicationId);
+    for (final intake in intakes) {
+      await deleteMedicationIntake(intake.id);
+    }
+  }
+
+  List<MedicationIntake> getAllMedicationIntakes() {
+    final all = _medicationIntakeBox?.values.toList() ?? [];
+    all.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+    return all;
+  }
+
+  List<MedicationIntake> getMedicationIntakesByMedicationId(String medicationId) {
+    final all = _medicationIntakeBox?.values
+            .where((intake) => intake.medicationId == medicationId)
+            .toList() ??
+        [];
+    all.sort((a, b) => a.scheduledAt.compareTo(b.scheduledAt));
+    return all;
+  }
+
 
   // -------- First Time Check --------
   Future<void> markProfileCompleted() async {
@@ -408,6 +494,8 @@ class StorageService {
     await _glucoseDataBox?.clear();
     await _tempDataBox?.clear();
     await _routineBox?.clear();
+    await _medicationBox?.clear();
+    await _medicationIntakeBox?.clear();
 
     if (Hive.isBoxOpen('adviceBox')) {
       await Hive.box<HealthAdvice>('adviceBox').clear();
@@ -441,6 +529,8 @@ class StorageService {
     await _userProfileBox?.close();
     await _alertBox?.close();
     await _routineBox?.close();
+    await _medicationBox?.close();
+    await _medicationIntakeBox?.close();
 
     if (Hive.isBoxOpen('adviceBox')) {
       await Hive.box<HealthAdvice>('adviceBox').close();

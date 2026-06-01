@@ -735,6 +735,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                               onTap: () => Navigator.pushNamed(context, '/ai_chat'),
                             ),
                             _buildActionCard(
+                              icon: Icons.medication_outlined,
+                              title: isArabic ? 'متابعة الأدوية' : 'Medications',
+                              color: Colors.indigo,
+                              onTap: () => Navigator.pushNamed(context, '/medications'),
+                            ),
+                            _buildActionCard(
                               icon: Icons.settings,
                               title: t.settings,
                               color: Colors.blueGrey,

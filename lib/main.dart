@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart'; // ✅ أضفنا هذا
 import 'package:firebase_crashlytics/firebase_crashlytics.dart'; // ✅ أضفنا هذا
+import 'dart:async';
 import 'dart:ui'; // ✅ أضفنا هذا للتعامل مع Platform errors
 import 'firebase_options.dart';
 import 'l10n/app_localizations.dart';
@@ -20,7 +21,9 @@ import 'screens/ai_chat_screen.dart';
 import 'screens/privacy_policy_screen.dart';
 import 'screens/advice_screen.dart';
 import 'screens/doctor_report_screen.dart';
+import 'screens/medication_screen.dart';
 import 'services/storage_service.dart';
+import 'services/medication_service.dart';
 import 'models/user_profile.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/app_theme_mode.dart';
@@ -82,6 +85,7 @@ void main() async {
   */
 
   runApp(const SmartHealthApp());
+  unawaited(MedicationService().syncMedicationSystemOnAppStart());
 }
 
 class SmartHealthApp extends StatefulWidget {
@@ -367,6 +371,8 @@ class _SmartHealthAppState extends State<SmartHealthApp> {
                 return createFadeRoute(const PrivacyPolicyScreen());
               case '/doctor_report':
                 return createSlideRoute(const DoctorReportScreen());
+              case '/medications':
+                return createSlideRoute(const MedicationScreen());
               default:
                 return MaterialPageRoute(
                   builder: (_) => const Scaffold(

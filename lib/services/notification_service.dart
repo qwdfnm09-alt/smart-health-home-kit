@@ -1,8 +1,8 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'storage_service.dart';
 import '../main.dart';
+import 'app_timezone_service.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _notifications =
@@ -30,7 +30,7 @@ class NotificationService {
       },
     );
 
-    tz.initializeTimeZones();
+    await AppTimezoneService.configureLocalTimezone();
 
     // تأكد من صلاحيات الإشعارات
     final androidPlugin =
