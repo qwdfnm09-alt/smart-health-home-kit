@@ -115,7 +115,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   void _shareReading(HealthData data, AppLocalizations t) {
-    final displayText = Helper.formatDisplayText(data);
+    final displayText = Helper.formatDisplayTextLocalized(data, t);
     final date = Helper.formatDate(data.timestamp);
     final isArabic = Localizations.localeOf(context).languageCode == 'ar';
     
@@ -254,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   }
 
   Widget _buildReadingCard(HealthData data, AppLocalizations t) {
-    final displayText = Helper.formatDisplayText(data);
+    final displayText = Helper.formatDisplayTextLocalized(data, t);
     final isOut = Helper.isOutOfRangeByType(
       data.type,
       data.value,

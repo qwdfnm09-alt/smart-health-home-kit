@@ -238,7 +238,7 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            Helper.formatDisplayText(_latestReading!),
+            Helper.formatDisplayTextLocalized(_latestReading!, t),
             style: const TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.bold,
@@ -321,7 +321,7 @@ class _BloodPressureScreenState extends State<BloodPressureScreen> {
           color: isOut ? Colors.red : Colors.green,
         ),
         title: Text(
-          Helper.formatDisplayText(data),
+          Helper.formatDisplayTextLocalized(data, t),
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: isOut ? Colors.red : Colors.green,

@@ -1,4 +1,5 @@
 import 'package:intl/intl.dart';
+import 'package:smart_health_home_kit/l10n/app_localizations.dart';
 import 'package:smart_health_home_kit/utils/logger.dart';
 import '../models/health_data.dart';
 import '../utils/constants.dart';
@@ -35,6 +36,65 @@ class Helper {
 
     // fallback generic
     return "${data.type} - ${data.value}";
+  }
+
+  static String localizedReadingLabel(
+    HealthData data,
+    AppLocalizations t,
+  ) {
+    final type = data.type.toLowerCase();
+
+    if (type == DataTypes.bp ||
+        type == 'bp' ||
+        type == 'bloodpressure' ||
+        type == 'blood_pressure') {
+      return t.bloodpressure;
+    }
+
+    if (type == DataTypes.glucose || type == 'glucose' || type == 'gl') {
+      return t.glucose;
+    }
+
+    if (type == DataTypes.temp ||
+        type == 'temp' ||
+        type == 'thermometer' ||
+        type == 'temperature') {
+      return t.temperature;
+    }
+
+    return data.type;
+  }
+
+  static String formatDisplayTextLocalized(
+    HealthData data,
+    AppLocalizations t,
+  ) {
+    final type = data.type.toLowerCase();
+
+    if (type == DataTypes.bp ||
+        type == 'bp' ||
+        type == 'bloodpressure' ||
+        type == 'blood_pressure') {
+      final sys = data.extra?['systolic'] ?? data.systolic ?? '-';
+      final dia = data.extra?['diastolic'] ?? data.diastolic ?? '-';
+      final pulse = data.extra?['pulse'] ?? data.pulse ?? '-';
+      return "${t.bloodpressure}: $sys/$dia mmHg | ${t.pulse}: $pulse bpm";
+    }
+
+    if (type == DataTypes.glucose || type == 'glucose' || type == 'gl') {
+      final val = data.extra?['glucose'] ?? data.glucose ?? data.value;
+      return "${t.glucose}: $val mg/dL";
+    }
+
+    if (type == DataTypes.temp ||
+        type == 'temp' ||
+        type == 'thermometer' ||
+        type == 'temperature') {
+      final val = data.extra?['temperature'] ?? data.temperature ?? data.value;
+      return "${t.temperature}: $val °C";
+    }
+
+    return "${localizedReadingLabel(data, t)} - ${data.value}";
   }
 
   static bool isBloodPressureAbnormal(HealthData data) {

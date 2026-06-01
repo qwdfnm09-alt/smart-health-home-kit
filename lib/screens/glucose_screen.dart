@@ -237,7 +237,7 @@ class _GlucoseScreenState extends State<GlucoseScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            "${_latestReading!.value} ${_latestReading!.unit}",
+            Helper.formatDisplayTextLocalized(_latestReading!, t),
             style: const TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -310,7 +310,7 @@ class _GlucoseScreenState extends State<GlucoseScreen> {
           color: isOut ? Colors.red : Colors.green,
         ),
         title: Text(
-          "${data.value} ${data.unit}",
+          Helper.formatDisplayTextLocalized(data, t),
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: isOut ? Colors.red : Colors.green,

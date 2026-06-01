@@ -138,8 +138,8 @@ class MedicationReportService {
     final ttfBold = pw.Font.ttf(arabicFontBold);
     final pdf = pw.Document(
       title: 'Medication Report',
-      author: report.profile?.name ?? 'Smart Health Kit',
-      creator: 'Smart Health Kit',
+      author: report.profile?.name ?? 'T-MED',
+      creator: 'T-MED',
     );
 
     final generated = DateFormat('yyyy-MM-dd HH:mm').format(report.generatedAt);

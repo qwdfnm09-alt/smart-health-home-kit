@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/health_data.dart';
 import '../models/user_profile.dart';
+import '../utils/constants.dart';
 import '../utils/helper.dart';
 
 class DoctorWhatsAppService {
@@ -39,7 +40,7 @@ class DoctorWhatsAppService {
         .map((entry) {
           final index = entry.key + 1;
           final reading = entry.value;
-          final value = Helper.formatDisplayText(reading);
+          final value = _formatReadingDisplay(reading, isArabic: isArabic);
           final date = Helper.formatDate(reading.timestamp);
 
           return isArabic
@@ -65,6 +66,42 @@ class DoctorWhatsAppService {
             'Chronic conditions: ${conditions.isEmpty ? 'None' : conditions}\n'
             'Total readings: ${healthData.length}\n\n'
             'Readings:\n$readingsText';
+  }
+
+  static String _formatReadingDisplay(
+    HealthData data, {
+    required bool isArabic,
+  }) {
+    if (!isArabic) {
+      return Helper.formatDisplayText(data);
+    }
+
+    final type = data.type.toLowerCase();
+
+    if (type == DataTypes.bp ||
+        type == 'bp' ||
+        type == 'bloodpressure' ||
+        type == 'blood_pressure') {
+      final sys = data.extra?['systolic'] ?? data.systolic ?? '-';
+      final dia = data.extra?['diastolic'] ?? data.diastolic ?? '-';
+      final pulse = data.extra?['pulse'] ?? data.pulse ?? '-';
+      return "ضغط الدم: $sys/$dia mmHg | النبض: $pulse bpm";
+    }
+
+    if (type == DataTypes.glucose || type == 'glucose' || type == 'gl') {
+      final val = data.extra?['glucose'] ?? data.glucose ?? data.value;
+      return "سكر الدم: $val mg/dL";
+    }
+
+    if (type == DataTypes.temp ||
+        type == 'temp' ||
+        type == 'thermometer' ||
+        type == 'temperature') {
+      final val = data.extra?['temperature'] ?? data.temperature ?? data.value;
+      return "الحرارة: $val °C";
+    }
+
+    return "${data.type} - ${data.value}";
   }
 
   static Future<void> openWhatsApp({

@@ -16,8 +16,8 @@ class DeviceTypes {
 }
 
 class AppStrings {
-  static const appName = 'Smart Health Kit';
-  static const developer = 'Developed by Elsayed said';
+  static const appName = 'T-MED';
+  static const developer = 'Developed by Elsayed Said';
 }
 
 class DataTypes {
@@ -43,7 +43,7 @@ class DeviceConstants {
 class Constants {
   static const String appWebsiteUrl = 'https://smarthealth-eg.framer.website/';
   static const String supportEmail = 'https://docs.google.com/forms/d/e/1FAIpQLSdNAejGDWOW_hFHh2rUyzHLiXQKwp6P0uVJ0gqRxK281sRksA/viewform';
-  static const String appName = 'Smart Health Kit';
+  static const String appName = 'T-MED';
   static const String tmedDoctorPhone = '2001203939070';
 
 

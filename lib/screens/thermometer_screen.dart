@@ -234,7 +234,7 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
           ),
           const SizedBox(height: 10),
           Text(
-            "${_latestReading!.value} °C",
+            Helper.formatDisplayTextLocalized(_latestReading!, t),
             style: const TextStyle(
               fontSize: 32,
               fontWeight: FontWeight.bold,
@@ -318,7 +318,7 @@ class _ThermometerScreenState extends State<ThermometerScreen> {
           color: isOut ? Colors.red : Colors.green,
         ),
         title: Text(
-          "${data.value} °C",
+          Helper.formatDisplayTextLocalized(data, t),
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: isOut ? Colors.red : Colors.green,

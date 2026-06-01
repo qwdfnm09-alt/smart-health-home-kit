@@ -190,7 +190,7 @@ class _ReportScreenState extends State<ReportScreen> {
                 itemCount: _filteredHealthData.length,
                 itemBuilder: (context, index) {
                   final data = _filteredHealthData[index];
-                  final value = Helper.formatDisplayText(data);
+                  final value = Helper.formatDisplayTextLocalized(data, t);
                   // ✅ نجمع كل الـ thresholds (سكر + حرارة + ضغط)
                   final Map<String, dynamic> allThresholds = {
                     ...Constants.alertThresholds,
@@ -209,7 +209,7 @@ class _ReportScreenState extends State<ReportScreen> {
                     margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     child: ListTile(
                       title: Text(
-                        "${data.type} - $value",
+                        value,
                        style: TextStyle(
                           color: isOut ? Colors.red : Colors.green,
                          fontWeight: FontWeight.bold,

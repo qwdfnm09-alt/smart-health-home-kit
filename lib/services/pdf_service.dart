@@ -20,6 +20,74 @@ import 'package:flutter/material.dart' as material;
 
 
 class PdfService {
+  static pw.Widget _buildArabicBulletLine(
+    String text,
+    pw.Font font,
+  ) {
+    return pw.Align(
+      alignment: pw.Alignment.centerRight,
+      child: pw.Text(
+        "• $text",
+        textDirection: pw.TextDirection.rtl,
+        textAlign: pw.TextAlign.right,
+        style: pw.TextStyle(font: font),
+      ),
+    );
+  }
+
+  static String _arabicReadingLabel(HealthData data) {
+    final type = data.type.toLowerCase();
+
+    if (type == DataTypes.bp ||
+        type == 'bp' ||
+        type == 'bloodpressure' ||
+        type == 'blood_pressure') {
+      return 'ضغط الدم';
+    }
+
+    if (type == DataTypes.glucose || type == 'glucose' || type == 'gl') {
+      return 'سكر الدم';
+    }
+
+    if (type == DataTypes.temp ||
+        type == 'temp' ||
+        type == 'thermometer' ||
+        type == 'temperature') {
+      return 'الحرارة';
+    }
+
+    return data.type;
+  }
+
+  static String _formatArabicReadingDisplay(HealthData data) {
+    final type = data.type.toLowerCase();
+
+    if (type == DataTypes.bp ||
+        type == 'bp' ||
+        type == 'bloodpressure' ||
+        type == 'blood_pressure') {
+      final sys = data.extra?['systolic'] ?? data.systolic ?? '-';
+      final dia = data.extra?['diastolic'] ?? data.diastolic ?? '-';
+      final pulse = data.extra?['pulse'] ?? data.pulse ?? '-';
+      return "ضغط الدم: $sys/$dia mmHg | النبض: $pulse bpm";
+    }
+
+    if (type == DataTypes.glucose || type == 'glucose' || type == 'gl') {
+      final val = data.extra?['glucose'] ?? data.glucose ?? data.value;
+      return "سكر الدم: $val mg/dL";
+    }
+
+    if (type == DataTypes.temp ||
+        type == 'temp' ||
+        type == 'thermometer' ||
+        type == 'temperature') {
+      final val = data.extra?['temperature'] ?? data.temperature ?? data.value;
+      return "الحرارة: $val °C";
+    }
+
+    return "${data.type} - ${data.value}";
+  }
+
   // 🧾 1. تقرير عام لكل القراءات
   static Future<pw.ImageProvider?> _generateChartImage(List<HealthData> data) async {
     try {
@@ -215,10 +283,13 @@ class PdfService {
               " بيانات المستخدم:",
               style: pw.TextStyle(
               fontSize: 18,font: ttfBold )),
-          pw.Bullet(text: "الاسم: ${profile.name}"),
-          pw.Bullet(text: "العمر: ${profile.age}"),
-          pw.Bullet(text: "الجنس: ${profile.gender}"),
-          pw.Bullet(text: "أمراض مزمنة: ${profile.conditions.join(', ')}"),
+          _buildArabicBulletLine("الاسم: ${profile.name}", ttf),
+          _buildArabicBulletLine("العمر: ${profile.age}", ttf),
+          _buildArabicBulletLine("الجنس: ${profile.gender}", ttf),
+          _buildArabicBulletLine(
+            "أمراض مزمنة: ${profile.conditions.join(', ')}",
+            ttf,
+          ),
           pw.SizedBox(height: 24),
           pw.Text(
               " القراءات الصحية:",
@@ -227,7 +298,7 @@ class PdfService {
           pw.TableHelper.fromTextArray(
             headers: ['التاريخ', 'النوع', 'القيمة'],
             data: healthDataList.map((data) {
-              final value = Helper.formatDisplayText(data);
+              final value = _formatArabicReadingDisplay(data);
               final Map<String, dynamic> allThresholds = {
                 ...Constants.alertThresholds,
                 ...Constants.bpThresholds,
@@ -243,7 +314,7 @@ class PdfService {
 
               return [
                 Helper.formatDate(data.timestamp),
-                data.type,
+                _arabicReadingLabel(data),
                 pw.Text(
                   "$value${isOut ? "" : ""}",
                   style: pw.TextStyle(
@@ -272,8 +343,8 @@ class PdfService {
             );
             return pw.Text(
               isOut
-                  ? " ${data.type} خارج النطاق عند ${Helper.formatValueByType(data.type, data.value)}"
-                  : " ${data.type} في النطاق الطبيعي",
+                  ? " ${_arabicReadingLabel(data)} خارج النطاق عند ${Helper.formatValueByType(data.type, data.value)}"
+                  : " ${_arabicReadingLabel(data)} في النطاق الطبيعي",
             );
           }),
         ],
