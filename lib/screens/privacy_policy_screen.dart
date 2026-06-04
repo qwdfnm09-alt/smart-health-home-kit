@@ -41,6 +41,12 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 : 'When you use the AI chat or submit text or images for analysis, the content you choose to send is transmitted to Google Gemini to process your request. Technical crash reports may also be sent to Firebase Crashlytics to help improve app stability. These services are used only within their stated functions.',
             ),
             _buildSection(
+              isArabic ? 'المعالجة بواسطة جهات خارجية' : 'Third-Party Processing',
+              isArabic
+                ? 'يُستخدم Google Gemini فقط لمعالجة طلبات المحادثة الذكية التي تبدأها بنفسك، ويُستخدم Firebase Crashlytics فقط لتشخيص الأعطال وتحسين الاستقرار. لا يبيع التطبيق بياناتك الصحية أو الشخصية، ولا يستخدمها لأغراض إعلانية.'
+                : 'Google Gemini is used only to process AI chat requests that you choose to submit, and Firebase Crashlytics is used only to diagnose crashes and improve stability. The app does not sell your health or personal data and does not use it for advertising purposes.',
+            ),
+            _buildSection(
               isArabic ? 'المشاركة بواسطة المستخدم' : 'User-Initiated Sharing',
               isArabic
                 ? 'إذا اخترت مشاركة تقرير PDF أو إرسال ملخص عبر واتساب، فإن المشاركة تتم فقط بناءً على إجراء صريح منك. لا يقوم التطبيق بمشاركة بياناتك الطبية تلقائياً مع أي جهة خارجية.'
@@ -59,6 +65,18 @@ class PrivacyPolicyScreen extends StatelessWidget {
                 : 'You can clear app data through the reset option inside settings. You may also stop using features such as AI or report sharing if you do not want to send any content outside your device.',
             ),
             _buildSection(
+              isArabic ? 'الاحتفاظ بالبيانات وحذفها' : 'Data Retention & Deletion',
+              isArabic
+                ? 'يتم الاحتفاظ ببياناتك الصحية والملف الشخصي محلياً على جهازك إلى أن تقوم بحذفها من خلال خيار إعادة الضبط داخل التطبيق أو إزالة التطبيق من جهازك. وإذا كانت لديك استفسارات متعلقة بالخصوصية، يمكنك التواصل عبر نموذج الدعم الموجود في صفحة سياسة الخصوصية العامة.'
+                : 'Your health data and profile data remain stored locally on your device until you remove them using the reset option inside the app or uninstall the app from your device. If you have privacy-related questions, you may contact us through the support form linked from the public privacy policy page.',
+            ),
+            _buildSection(
+              isArabic ? 'خصوصية الأطفال' : "Children's Privacy",
+              isArabic
+                ? 'هذا التطبيق غير موجه للأطفال دون سن 13 عامًا، ولا نجمع عن قصد بيانات شخصية من الأطفال دون هذا السن.'
+                : 'This app is not directed to children under the age of 13, and we do not knowingly collect personal information from children under 13.',
+            ),
+            _buildSection(
               isArabic ? 'تنبيه طبي' : 'Medical Notice',
               isArabic
                 ? 'هذا التطبيق مخصص للمتابعة والتنظيم والمساعدة العامة، ولا يُعد بديلاً عن الطبيب أو عن التشخيص والعلاج الطبي المتخصص.'
@@ -66,7 +84,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              isArabic ? 'آخر تحديث: أبريل 2026' : 'Last Updated: April 2026',
+              isArabic ? 'آخر تحديث: يونيو 2026' : 'Last Updated: June 2026',
               style: const TextStyle(color: Colors.grey, fontSize: 12),
             ),
           ],
